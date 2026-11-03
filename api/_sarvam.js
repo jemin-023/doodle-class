@@ -1,5 +1,5 @@
 // Shared Sarvam helpers (plain ESM, Node 18+).
-export const CHAT_MODEL = 'sarvam-m'
+export const CHAT_MODEL = 'sarvam-105b'
 
 export function hasKey() { return !!process.env.SARVAM_API_KEY }
 
@@ -9,13 +9,13 @@ export function parseBody(req) {
   return b && typeof b === 'object' ? b : {}
 }
 
-export async function chat(messages, { temperature = 0.4, max_tokens = 3000 } = {}) {
+export async function chat(messages, { temperature = 0.4, max_tokens = 4000 } = {}) {
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
   const r = await fetch('https://api.sarvam.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key, Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: CHAT_MODEL, messages, temperature, max_tokens }),
+    body: JSON.stringify({ model: CHAT_MODEL, messages, temperature, max_tokens, reasoning_effort: null }),
   })
   if (!r.ok) throw new Error(`sarvam chat ${r.status}: ${(await r.text()).slice(0, 200)}`)
   const j = await r.json()
@@ -58,11 +58,11 @@ async function ttsOne(text, speaker, language, key) {
   return fetch('https://api.sarvam.ai/text-to-speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
-    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v2' }),
+    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3' }),
   })
 }
 
-export async function tts(text, speaker = 'anushka', language = 'en-IN') {
+export async function tts(text, speaker = 'priya', language = 'en-IN') {
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
   const chunks = chunkText(text)
@@ -70,7 +70,7 @@ export async function tts(text, speaker = 'anushka', language = 'en-IN') {
   let spk = speaker
   for (const c of chunks) {
     let r = await ttsOne(c, spk, language, key)
-    if (!r.ok && spk !== 'anushka') { spk = 'anushka'; r = await ttsOne(c, spk, language, key) }
+    if (!r.ok && spk !== 'priya') { spk = 'priya'; r = await ttsOne(c, spk, language, key) }
     if (!r.ok) throw new Error(`sarvam tts ${r.status}: ${(await r.text()).slice(0, 200)}`)
     const j = await r.json()
     if (!j?.audios?.[0]) throw new Error('tts: no audio')
