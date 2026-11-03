@@ -42,6 +42,7 @@ const MENU: { label: string; sub: string; to: string; doodle: DoodleName; color?
   { label: 'Test myself', sub: 'A quick quiz on my book', to: '/study?mode=test', doodle: 'ruler', color: 'var(--marker-red)' },
   { label: 'Talk to a teacher', sub: 'Ask out loud', to: '/talk/:t', doodle: 'cloud' },
   { label: 'Snap a page', sub: 'Photo to lesson', to: '/snap', doodle: 'pencil' },
+  { label: '1v1 Challenge', sub: 'Battle a friend with a 6-digit code', to: '/challenge', doodle: 'star', color: 'var(--marker-orange)' },
   { label: 'Classroom', sub: 'Quiz with friends', to: '/class', doodle: 'rocket' },
   { label: 'Family voice', sub: 'Hear Nani teach', to: '/family-voice', doodle: 'sun' },
   { label: 'Progress', sub: 'My stars', to: '/progress', doodle: 'star' },

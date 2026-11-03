@@ -17,21 +17,21 @@ function CodeEntry() {
   return (
     <main className="pg-wrap pg-sheet cl-join">
       <h1 className="cl-h1">Join a class</h1>
-      <p className="pg-sub">Type the 4-letter code from the big screen.</p>
+      <p className="pg-sub">Type the 4-letter class code or 6-digit 1v1 challenge code.</p>
       <SketchCard tilt={-0.5} tape>
         <div className="cl-form">
           <TextInput
             value={c}
-            onChange={e => setC(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
-            placeholder="ABCD"
+            onChange={e => setC(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+            placeholder="CODE"
             className="cl-codein"
             inputMode="text"
             autoCapitalize="characters"
             autoComplete="off"
-            aria-label="Class code"
-            onKeyDown={e => e.key === 'Enter' && c.length === 4 && nav('/join/' + c)}
+            aria-label="Class or 1v1 challenge code"
+            onKeyDown={e => e.key === 'Enter' && (c.length === 4 || c.length === 6) && nav(c.length === 6 ? '/challenge/' + c : '/join/' + c)}
           />
-          <SketchButton disabled={c.length !== 4} onClick={() => nav('/join/' + c)}>Go</SketchButton>
+          <SketchButton disabled={c.length !== 4 && c.length !== 6} onClick={() => nav(c.length === 6 ? '/challenge/' + c : '/join/' + c)}>Go</SketchButton>
         </div>
       </SketchCard>
     </main>

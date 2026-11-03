@@ -691,6 +691,7 @@ export default function QuizPage() {
 
               <div className="qz-result-actions">
                 <SketchButton variant="primary" onClick={retry}>Try again</SketchButton>
+                <SketchButton variant="ghost" onClick={() => navigate(`/challenge?topic=${encodeURIComponent(topic)}&grade=${grade}&lang=${language}`)}>1v1 Challenge a friend ⚔️</SketchButton>
                 <SketchButton variant="ghost" onClick={() => navigate(`/learn/${characterId}?${learnQs}`)}>Re-watch lesson</SketchButton>
                 <SketchButton variant="ghost" onClick={() => navigate('/')}>Learn something new</SketchButton>
               </div>

@@ -23,6 +23,10 @@ export interface RoomState {
   playerCount: number; players: RoomPlayer[]; leaderboard: LbRow[]
   question: RoomQuestion | null; answerCount: number; tally: number[] | null; me?: RoomMe
   isHomework?: boolean
+  is1v1?: boolean
+  countdownEndsAt?: number
+  revealEndsAt?: number
+  answeredPlayerIds?: string[]
   checkin?: CheckinState | null
 }
 
@@ -79,9 +83,10 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
   } finally { clearTimeout(t) }
 }
 
-export interface CreateRoomInput { topic: string; language: LanguageCode; grade: number; characterId: string; questions: QuizQuestion[] }
+export interface CreateRoomInput { topic: string; language: LanguageCode; grade: number; characterId: string; questions: QuizQuestion[]; is1v1?: boolean }
 export const createRoom = (r: CreateRoomInput) => call<{ code: string; hostKey: string }>({ action: 'create', ...r })
 export const createHomework = (r: CreateRoomInput) => call<{ code: string; hostKey: string }>({ action: 'homework', ...r })
+export const createChallenge = (r: CreateRoomInput) => call<{ code: string; hostKey: string }>({ action: 'challenge', is1v1: true, ...r })
 export const joinRoom = (code: string, name: string, avatar: string) => call<{ playerId: string; name: string; avatar: string }>({ action: 'join', code, name, avatar })
 export const getRoomState = (code: string, playerId?: string, qIndex?: number) => call<RoomState>({ action: 'state', code, playerId, ...(qIndex !== undefined ? { qIndex } : {}) })
 export const answerRoom = (code: string, playerId: string, qIndex: number, choice: number) => call<{ ok: true }>({ action: 'answer', code, playerId, qIndex, choice })

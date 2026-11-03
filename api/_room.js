@@ -14,8 +14,9 @@ const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no 0/O/1/I
 const CHARS = ['tara', 'bolt', 'mishri', 'gajju']
 const mk = k => `room:${k}`
 const code4 = () => Array.from(randomBytes(4), b => ALPHA[b % ALPHA.length]).join('')
+const code6 = () => String(Math.floor(100000 + Math.random() * 900000))
 const clean = (s, n) => String(s ?? '').replace(/\*\*/g, '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n)
-const cleanCode = c => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)
+const cleanCode = c => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
 
 function cleanQuestions(arr) {
   const out = []
@@ -39,8 +40,55 @@ function cleanQuestions(arr) {
 async function load(code) {
   const m = await kvGet(mk(code))
   if (!m) return null
+  const now = Date.now()
+
+  // Auto-advance logic for 1v1 challenge matches
+  if (m.is1v1) {
+    if (m.phase === 'lobby' && m.countdownEndsAt && now >= m.countdownEndsAt) {
+      m.phase = 'question'
+      m.qIndex = 0
+      m.startedAt = now
+      m.endsAt = now + QSEC * 1000
+      m.countdownEndsAt = 0
+      m.revealEndsAt = 0
+      await kvSet(mk(code), m, getTTL(m))
+    } else if (m.phase === 'question') {
+      let over = now >= m.endsAt
+      if (!over) {
+        const [pl, an] = await Promise.all([
+          kvHGetAll(mk(code) + ':p'),
+          kvHGetAll(mk(code) + ':a' + m.qIndex),
+        ])
+        const n = Object.keys(pl).length
+        over = n >= 2 && Object.keys(an).length >= n
+      }
+      if (over) {
+        m.phase = 'reveal'
+        m.revealEndsAt = now + 3500 // 3.5s to review round score
+        m.endsAt = 0
+        await kvSet(mk(code), m, getTTL(m))
+      }
+    } else if (m.phase === 'reveal') {
+      if (m.revealEndsAt && now >= m.revealEndsAt) {
+        if (m.qIndex + 1 >= m.questions.length) {
+          m.phase = 'end'
+          m.revealEndsAt = 0
+        } else {
+          m.phase = 'question'
+          m.qIndex += 1
+          m.startedAt = now
+          m.endsAt = now + QSEC * 1000
+          m.revealEndsAt = 0
+        }
+        await kvSet(mk(code), m, getTTL(m))
+      }
+    }
+    return m
+  }
+
+  // Normal classroom mode
   if (!m.isHomework && m.phase === 'question') {
-    let over = Date.now() >= m.endsAt
+    let over = now >= m.endsAt
     if (!over) {
       const [pl, an] = await Promise.all([kvHGetAll(mk(code) + ':p'), kvHGetAll(mk(code) + ':a' + m.qIndex)])
       const n = Object.keys(pl).length
@@ -76,31 +124,33 @@ export default async function handler(req, res) {
   const b = parseBody(req)
   const action = String(b.action || '')
   try {
-    if (action === 'create' || action === 'homework') {
+    if (action === 'create' || action === 'homework' || action === 'challenge') {
       const questions = cleanQuestions(b.questions)
       if (questions.length < 1) return res.status(400).json({ error: 'need at least one valid question' })
-      let code = '', tries = 0
-      do { code = code4(); tries++ } while ((await kvGet(mk(code))) && tries < 12)
-      const hostKey = randomBytes(12).toString('hex')
       const isHomework = action === 'homework'
+      const is1v1 = action === 'challenge' || !!b.is1v1
+      let code = '', tries = 0
+      do { code = is1v1 ? code6() : code4(); tries++ } while ((await kvGet(mk(code))) && tries < 12)
+      const hostKey = randomBytes(12).toString('hex')
       const meta = {
-        hostKey, topic: cleanTopic(b.topic) || (isHomework ? 'Homework' : 'Quiz'), language: cleanLang(b.language), grade: cleanGrade(b.grade),
+        hostKey, topic: cleanTopic(b.topic) || (isHomework ? 'Homework' : is1v1 ? '1v1 Challenge' : 'Quiz'), language: cleanLang(b.language), grade: cleanGrade(b.grade),
         characterId: CHARS.includes(b.characterId) ? b.characterId : 'tara', questions,
-        phase: isHomework ? 'homework' : 'lobby', isHomework,
-        qIndex: 0, endsAt: 0, startedAt: isHomework ? Date.now() : 0, createdAt: Date.now(),
+        phase: isHomework ? 'homework' : 'lobby', isHomework, is1v1,
+        qIndex: 0, endsAt: 0, revealEndsAt: 0, countdownEndsAt: 0, startedAt: isHomework ? Date.now() : 0, createdAt: Date.now(),
       }
       await kvSet(mk(code), meta, isHomework ? HW_TTL : TTL)
       return res.status(200).json({ code, hostKey })
     }
 
     const code = cleanCode(b.code)
-    if (code.length !== 4) return res.status(404).json({ error: 'room not found' })
+    if (code.length !== 4 && code.length !== 6) return res.status(404).json({ error: 'room not found' })
 
     if (action === 'join') {
       const m = await load(code)
       if (!m) return res.status(404).json({ error: 'room not found' })
       const players = await kvHGetAll(mk(code) + ':p')
-      if (Object.keys(players).length >= MAX_PLAYERS) return res.status(409).json({ error: 'room is full' })
+      const maxP = m.is1v1 ? 2 : MAX_PLAYERS
+      if (Object.keys(players).length >= maxP) return res.status(409).json({ error: 'room is full' })
       let name = clean(b.name, 16) || 'Student'
       const taken = new Set(Object.values(players).map(p => p.name.toLowerCase()))
       if (taken.has(name.toLowerCase())) {
@@ -110,6 +160,10 @@ export default async function handler(req, res) {
       const avatar = CHARS.includes(b.avatar) ? b.avatar : CHARS[Object.keys(players).length % 4]
       const playerId = randomBytes(6).toString('hex')
       await kvHSet(mk(code) + ':p', playerId, { name, avatar, at: Date.now() }, getTTL(m))
+      if (m.is1v1 && Object.keys(players).length + 1 >= 2 && m.phase === 'lobby') {
+        m.countdownEndsAt = Date.now() + 3500
+        await kvSet(mk(code), m, getTTL(m))
+      }
       return res.status(200).json({ playerId, name, avatar })
     }
 
@@ -185,18 +239,22 @@ export default async function handler(req, res) {
       const { players, lb, per } = await board(code, m)
       const revealed = m.phase === 'reveal' || m.phase === 'end'
       const out = {
-        code, phase: m.phase, isHomework: false, topic: m.topic, language: m.language, grade: m.grade, characterId: m.characterId,
+        code, phase: m.phase, isHomework: false, is1v1: !!m.is1v1, topic: m.topic, language: m.language, grade: m.grade, characterId: m.characterId,
         qIndex: m.qIndex, total: m.questions.length, qSeconds: QSEC, now: Date.now(),
         endsAt: m.phase === 'question' ? m.endsAt : 0,
+        countdownEndsAt: m.countdownEndsAt || 0,
+        revealEndsAt: m.revealEndsAt || 0,
         playerCount: Object.keys(players).length,
         players: Object.entries(players).sort((a, b) => a[1].at - b[1].at).slice(0, MAX_PLAYERS).map(([id, p]) => ({ id, name: p.name, avatar: p.avatar })),
         leaderboard: lb.slice(0, 10), question: null, answerCount: 0, tally: null, checkin,
+        answeredPlayerIds: [],
       }
       if (m.phase === 'question' || m.phase === 'reveal') {
         const q = m.questions[m.qIndex]
         out.question = { id: q.id, type: q.type, prompt: q.prompt, options: q.options }
         const ans = per[m.qIndex] ?? await kvHGetAll(mk(code) + ':a' + m.qIndex)
         out.answerCount = Object.keys(ans).length
+        out.answeredPlayerIds = Object.keys(ans)
         if (m.phase === 'reveal') {
           out.question.correct = q.correct; out.question.explanation = q.explanation
           out.tally = q.options.map((_, i) => Object.values(ans).filter(v => v.choice === i).length)

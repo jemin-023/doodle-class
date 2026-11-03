@@ -22,6 +22,7 @@ import SharedNotebook from './pages/SharedNotebook'
 import About from './pages/About'
 import BookPractice from './pages/BookPractice'
 import SpeakPractice from './pages/SpeakPractice'
+import Challenge from './pages/Challenge'
 export default function App() {
   return (
     <>
@@ -50,6 +51,10 @@ export default function App() {
       <Route path="/class/:code" element={<ClassHost />} />
       <Route path="/join" element={<ClassJoin />} />
       <Route path="/join/:code" element={<ClassJoin />} />
+      <Route path="/challenge" element={<Challenge />} />
+      <Route path="/challenge/:code" element={<Challenge />} />
+      <Route path="/1v1" element={<Navigate to="/challenge" replace />} />
+      <Route path="/duel" element={<Navigate to="/challenge" replace />} />
       {import.meta.env.DEV && <Route path="/dev/diagrams" element={<DevDiagrams />} />}
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
