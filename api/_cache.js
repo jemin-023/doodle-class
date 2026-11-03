@@ -7,9 +7,10 @@ export const PROMPT_VERSION = 'v9'
 export const TTL = 30 * 24 * 3600
 const normTopic = t => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
-export function cacheKey(kind, { topic, characterId, language, grade, boardLanguage }) {
+export function cacheKey(kind, { topic, characterId, language, grade, boardLanguage, count, chapterTest }) {
   const lang = (language || '') + (boardLanguage && boardLanguage !== language ? '>' + boardLanguage : '')
-  const raw = [kind, normTopic(topic), characterId || '', lang, grade || '', PROMPT_VERSION].join('|')
+  const extra = [count ? `count:${count}` : '', chapterTest ? 'chapterTest' : ''].filter(Boolean).join(':')
+  const raw = [kind, normTopic(topic), characterId || '', lang, grade || '', ...(extra ? [extra] : []), PROMPT_VERSION].join('|')
   return 'dc:' + kind + ':' + createHash('sha1').update(raw).digest('hex').slice(0, 24)
 }
 export async function cacheGet(kind, req) {

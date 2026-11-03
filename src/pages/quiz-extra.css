@@ -1,0 +1,425 @@
+/* Quiz Extra styles: Timer mode (C4), Challenge badge (C2), Explain your answer (C5), Chapter test per-section breakdown (C1), Weak topics (C6) */
+
+/* Top header bar info & doodle timer ring */
+.qz-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.qz-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.qz-section-tag {
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  color: var(--ink-soft);
+  background: var(--paper-2);
+  border: 1.5px dashed var(--ink-soft);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+/* Challenge badge (C2) */
+.qz-challenge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--highlight);
+  border: 2px solid var(--ink);
+  border-radius: 6px 12px 6px 10px / 10px 6px 12px 6px;
+  padding: 2px 10px;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0 var(--ink);
+  animation: qz-wobble 2s ease-in-out infinite alternate;
+}
+
+@keyframes qz-wobble {
+  0% { transform: rotate(-2deg); }
+  100% { transform: rotate(1.5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qz-challenge-badge { animation: none; }
+}
+
+/* Doodle timer ring (C4) */
+.qz-timer-ring-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 54px;
+  height: 54px;
+  flex: none;
+}
+
+.qz-timer-ring-svg {
+  width: 54px;
+  height: 54px;
+  transform: rotate(-90deg);
+}
+
+.qz-timer-track {
+  fill: none;
+  stroke: var(--rule);
+  stroke-width: 5;
+}
+
+.qz-timer-prog {
+  fill: none;
+  stroke: var(--marker-blue);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear, stroke 0.3s ease;
+}
+
+.qz-timer-ring-wrap.is-warning .qz-timer-prog {
+  stroke: var(--marker-red);
+  animation: qz-pulse-red 0.8s ease-in-out infinite alternate;
+}
+
+.qz-timer-number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.qz-timer-ring-wrap.is-warning .qz-timer-number {
+  color: var(--marker-red);
+}
+
+@keyframes qz-pulse-red {
+  0% { stroke-width: 5; }
+  100% { stroke-width: 7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qz-timer-ring-wrap.is-warning .qz-timer-prog { animation: none; }
+}
+
+/* Start screen (C4) */
+.qz-start-card {
+  padding: 36px 28px;
+  text-align: center;
+}
+
+.qz-start-box {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.qz-start-title {
+  font-family: var(--font-hand);
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  margin: 8px 0 4px;
+  color: var(--ink);
+}
+
+.qz-start-subtitle {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.qz-timer-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 8px;
+  padding: 12px 18px;
+  background: var(--paper-2);
+  border: 2px dashed var(--ink-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.qz-timer-toggle-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--marker-blue);
+  cursor: pointer;
+}
+
+.qz-timer-toggle-text {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Explain your answer ("Why?") (C5) */
+.qz-why-box {
+  margin-top: 24px;
+  padding: 20px 22px;
+  background: var(--board);
+  border: 2px solid var(--marker-blue);
+  border-radius: 8px 12px 7px 10px / 10px 7px 12px 8px;
+  box-shadow: 2px 3px 0 rgba(47, 95, 208, 0.18);
+  animation: qz-appear 0.3s ease-out;
+}
+
+@keyframes qz-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.qz-why-title {
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  color: var(--marker-blue);
+  margin: 0 0 10px;
+}
+
+.qz-why-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qz-why-input {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 1.15rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  outline: none;
+  min-height: 48px;
+  resize: vertical;
+}
+
+.qz-why-input:focus {
+  border-color: var(--marker-blue);
+}
+
+.qz-why-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qz-why-feedback {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qz-why-stars-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qz-why-stars-row .qz-star {
+  width: 42px;
+  height: 42px;
+}
+
+.qz-why-say {
+  font-family: var(--font-hand);
+  font-size: 1.45rem;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.qz-bonus-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--marker-green);
+  background: #eef8f0;
+  border: 1.5px solid var(--marker-green);
+  border-radius: 20px;
+  padding: 2px 14px;
+}
+
+/* End screen per-section breakdown (C1) */
+.qz-section-breakdown {
+  margin: 28px 0 20px;
+  text-align: left;
+  width: 100%;
+}
+
+.qz-section-breakdown-title {
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+  color: var(--ink);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.qz-section-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qz-section-card {
+  padding: 14px 18px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+
+.qz-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.qz-section-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.qz-section-score {
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  flex: none;
+}
+
+.qz-section-bar-track {
+  height: 14px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.qz-section-bar-fill {
+  height: 100%;
+  background: var(--marker-green);
+  transition: width 0.6s ease-out;
+}
+
+.qz-section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.qz-section-badge.is-mastered {
+  color: var(--marker-green);
+  background: #eef8f0;
+  border: 1px solid var(--marker-green);
+}
+
+.qz-section-badge.is-done {
+  color: var(--ink-soft);
+  background: var(--paper-2);
+  border: 1px solid var(--ink-faint);
+}
+
+/* Weak topics (C6) */
+.qz-weak-section {
+  margin: 28px 0 20px;
+  text-align: left;
+  width: 100%;
+}
+
+.qz-weak-title {
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+  color: var(--marker-red);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.qz-weak-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.qz-weak-card {
+  padding: 16px 18px;
+  background: var(--paper);
+  border: 2px solid var(--bad);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qz-weak-concept {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--ink);
+}
+
+.qz-weak-meta {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.qz-weak-questions {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.qz-weak-questions li {
+  margin-bottom: 4px;
+}
+
+.qz-weak-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
