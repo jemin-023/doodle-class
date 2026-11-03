@@ -16,6 +16,9 @@ import ClassHost from './pages/ClassHost'
 import ClassJoin from './pages/ClassJoin'
 import DevDiagrams from './pages/DevDiagrams'
 import Study from './pages/Study'
+import Notebooks from './pages/Notebooks'
+import NotebookPage from './pages/NotebookPage'
+import SharedNotebook from './pages/SharedNotebook'
 export default function App() {
   return (
     <>
@@ -31,6 +34,9 @@ export default function App() {
       <Route path="/practice" element={<QuickQuiz />} />
       <Route path="/talk/:characterId" element={<Talk />} />
       <Route path="/study" element={<Study />} />
+      <Route path="/notebooks" element={<Notebooks />} />
+      <Route path="/notebook/:id" element={<NotebookPage />} />
+      <Route path="/nb/:code" element={<SharedNotebook />} />
       <Route path="/snap" element={<Snap />} />
       <Route path="/family-voice" element={<FamilyVoice />} />
       <Route path="/parent" element={<ParentReport />} />

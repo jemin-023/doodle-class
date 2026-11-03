@@ -9,6 +9,18 @@ const H = {
   room: () => import('../_room.js'),
   ncert: () => import('../_ncert.js'),
   deep: () => import('../_deep.js'),
+  nbchat: () => import('../_nbchat.js'),
+  podcast: () => import('../_podcast.js'),
+  mindmap: () => import('../_mindmap.js'),
+  studio: () => import('../_studio.js'),
+  srcguide: () => import('../_srcguide.js'),
+  fetchurl: () => import('../_fetchurl.js'),
+  nbshare: () => import('../_nbshare.js'),
+  exercises: () => import('../_exercises.js'),
+  examq: () => import('../_examq.js'),
+  checkwork: () => import('../_checkwork.js'),
+  parenttips: () => import('../_parenttips.js'),
+  flashcards: () => import('../_flashcards.js'),
 }
 export default async function handler(req, res) {
   const fn = String(req.query?.fn || '').toLowerCase()
