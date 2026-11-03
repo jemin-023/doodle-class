@@ -15,7 +15,7 @@ try {
 } catch {}
 
 const PORT = Number(process.env.PORT) || 8787
-const routes = { '/api/lesson': 'lesson.js', '/api/quiz': 'quiz.js', '/api/tts': 'tts.js', '/api/lesson-stream': 'lesson-stream.js', '/api/ask': 'ask.js', '/api/stt': 'stt.js', '/api/syllabus': 'syllabus.js', '/api/coach': 'coach.js' }
+const routes = { '/api/lesson': 'lesson.js', '/api/quiz': 'quiz.js', '/api/tts': 'tts.js', '/api/lesson-stream': 'lesson-stream.js', '/api/ask': 'ask.js', '/api/stt': 'stt.js', '/api/syllabus': 'syllabus.js', '/api/coach': 'coach.js', '/api/chat': 'chat.js' }
 
 http.createServer(async (req, res) => {
   const t0 = Date.now()

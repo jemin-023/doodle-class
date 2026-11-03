@@ -5,6 +5,7 @@ import type { LanguageCode } from '../types'
 import Character, { CharacterAvatar } from '../components/Characters/Character'
 import { SketchButton, SketchCard, Scribble, Icon, TopBar, Chip, TextInput } from '../components/ui'
 import { getHistory, getTotalStars } from '../lib/progress'
+import { getProfile } from '../lib/profile'
 import CoachCard from '../components/Coach/CoachCard'
 import './pages.css'
 
@@ -37,6 +38,9 @@ export default function Home() {
   const [hover, setHover] = useState<string | null>(null)
   const history = getHistory().slice(0, 4)
   const stars = getTotalStars()
+  const prof = getProfile()
+  const pname = prof.name.trim()
+  const tchr = CHARACTERS.find(c => c.id === prof.characterId) ?? CHARACTERS[0]
 
   const start = () => {
     const t = topic.trim()
@@ -52,6 +56,7 @@ export default function Home() {
       </TopBar>
       <main className="pg-wrap pg-sheet">
         <header className="pg-head">
+          {pname && <p className="pg-sub">Hi {pname}!</p>}
           <h1>What do you want to <span className="pg-scribbled">learn<span className="pg-scribble"><Scribble kind="underline" color="var(--marker-red)" width={160} height={14} /></span></span> today?</h1>
           <p className="pg-sub">Pick a teacher, name a topic, and watch the lesson get written out for you.</p>
         </header>
@@ -117,6 +122,9 @@ export default function Home() {
         <p className="pg-links" style={{ margin: '32px 0 0', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <Link to="/progress" >See my progress →</Link>
           <Link to={`/journey/${cid}`} >My chapter map →</Link>
+          <Link to="/profile">My profile →</Link>
+          <Link to="/practice">Just a quiz →</Link>
+          <Link to={`/talk/${tchr.id}`}>Talk to {tchr.name} →</Link>
           <Link to="/syllabus" >Upload my syllabus →</Link>
         </p>
 

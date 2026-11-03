@@ -6,6 +6,9 @@ import Progress from './pages/Progress'
 import Journey from './pages/Journey'
 import Boss from './pages/Boss'
 import Syllabus from './pages/Syllabus'
+import Profile from './pages/Profile'
+import Talk from './pages/Talk'
+import QuickQuiz from './pages/QuickQuiz'
 export default function App() {
   return (
     <Routes>
@@ -16,6 +19,9 @@ export default function App() {
       <Route path="/journey/:characterId" element={<Journey />} />
       <Route path="/boss/:characterId/:chapter" element={<Boss />} />
       <Route path="/syllabus" element={<Syllabus />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/practice" element={<QuickQuiz />} />
+      <Route path="/talk/:characterId" element={<Talk />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

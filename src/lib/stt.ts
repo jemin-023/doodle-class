@@ -71,7 +71,9 @@ export async function listen(opts: { language: LanguageCode; maxMs?: number; onS
     })
     if (!r.ok) return ''
     const j = await r.json()
-    return typeof j.transcript === 'string' ? j.transcript.trim() : ''
+    const t = typeof j.transcript === 'string' ? j.transcript.trim() : ''
+    if (t) { try { localStorage.setItem('doodle-class:voice-used', '1') } catch { /* ignore */ } }
+    return t
   } catch {
     return ''
   } finally {

@@ -6,7 +6,7 @@ const SHAPES = ['circle', 'arrow', 'box', 'star', 'underline', 'divider']
 const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati' }
 const PERSONA = {
   tara: 'Tara the owl: wise, patient, loves puzzles, says things like "let us solve this puzzle".',
-  bolt: 'Bolt the robot: curious, experiment-loving, says things like "let us test it and see".',
+  bolt: 'Chintu the robot: curious, experiment-loving, says things like "let us test it and see".',
   mishri: 'Mishri the cat: playful storyteller who loves words.',
   gajju: 'Gajju the elephant: warm, remembers every fact, loves history stories.',
 }
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     grade: Number(body.grade) || 5,
   }
   try {
-    const ch = { id: request.characterId, name: ({ tara: 'Tara', bolt: 'Bolt', mishri: 'Mishri', gajju: 'Gajju' })[request.characterId] || 'Tara', subject: ({ tara: 'Maths', bolt: 'Science', mishri: 'English', gajju: 'History' })[request.characterId] || 'General' }
+    const ch = { id: request.characterId, name: ({ tara: 'Tara', bolt: 'Chintu', mishri: 'Mishri', gajju: 'Gajju' })[request.characterId] || 'Tara', subject: ({ tara: 'Maths', bolt: 'Science', mishri: 'English', gajju: 'History' })[request.characterId] || 'General' }
     const lang = LANG_NAMES[request.language] || 'English'
     const sys = `You are ${PERSONA[ch.id] || ch.name}, a friendly teacher for children. Reply with ONE JSON object only, no markdown, no explanation.`
     const user = `Teach the topic "${request.topic}" to a grade ${request.grade} student.

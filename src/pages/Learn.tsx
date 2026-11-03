@@ -178,7 +178,7 @@ export default function Learn() {
             {steps.length > 0 && !started && (
               <div className="pg-board-msg">
                 <SketchButton onClick={begin}>Start</SketchButton>
-                {streaming && <div className="pg-note">Bolt is writing more…</div>}
+                {streaming && <div className="pg-note">{ch.name} is writing more…</div>}
               </div>
             )}
             {steps.length > 0 && started && (

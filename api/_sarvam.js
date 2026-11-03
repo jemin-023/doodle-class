@@ -58,7 +58,7 @@ async function ttsOne(text, speaker, language, key) {
   return fetch('https://api.sarvam.ai/text-to-speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
-    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3', output_audio_codec: 'mp3', speech_sample_rate: 16000 }),
+    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3', output_audio_codec: 'mp3', speech_sample_rate: 16000, pace: 1.1, temperature: 0.8 }),
   })
 }
 
@@ -81,11 +81,11 @@ export async function tts(text, speaker = 'priya', language = 'en-IN') {
 export const BOARD_KINDS = ['title', 'text', 'bullet', 'equation', 'highlight', 'example', 'drawing']
 export const BOARD_SHAPES = ['circle', 'arrow', 'box', 'star', 'underline', 'divider']
 export const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati' }
-export const CHAR_NAMES = { tara: 'Tara', bolt: 'Bolt', mishri: 'Mishri', gajju: 'Gajju' }
+export const CHAR_NAMES = { tara: 'Tara', bolt: 'Chintu', mishri: 'Mishri', gajju: 'Gajju' }
 export const CHAR_SUBJECTS = { tara: 'Maths', bolt: 'Science', mishri: 'English', gajju: 'History' }
 export const PERSONA = {
   tara: 'Tara the owl: wise, patient, loves puzzles, says things like "let us solve this puzzle".',
-  bolt: 'Bolt the robot: curious, experiment-loving, says things like "let us test it and see".',
+  bolt: 'Chintu the robot: curious, experiment-loving, says things like "let us test it and see".',
   mishri: 'Mishri the cat: playful storyteller who loves words.',
   gajju: 'Gajju the elephant: warm, remembers every fact, loves history stories.',
 }

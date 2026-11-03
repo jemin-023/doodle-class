@@ -1,0 +1,15 @@
+.pf-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+@media (max-width: 800px) { .pf-cols { grid-template-columns: 1fr; } }
+.pf-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.pf-teachers { display: flex; gap: 12px; flex-wrap: wrap; }
+.pf-t { background: none; border: 2px dashed transparent; border-radius: 12px; padding: 4px; cursor: pointer; font-family: var(--font-hand); font-size: 1.1rem; color: var(--ink); display: flex; flex-direction: column; align-items: center; }
+.pf-t.is-sel { border-color: var(--ink); }
+.pf-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.pf-stat { border: 2px solid var(--ink); border-radius: 10px; padding: 8px 12px; background: var(--paper, #fff); }
+.pf-stat b { display: block; font-family: var(--font-hand); font-size: 2rem; line-height: 1; }
+.pf-bar { height: 16px; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; background: transparent; }
+.pf-bar > i { display: block; height: 100%; background: var(--marker-blue); }
+.pf-badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.pf-badge { text-align: center; font-family: var(--font-hand); font-size: 1.05rem; opacity: .35; filter: grayscale(1); }
+.pf-badge.on { opacity: 1; filter: none; }
+.pf-badge svg { width: 72px; height: 72px; }
