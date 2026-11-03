@@ -1,0 +1,10 @@
+.coach-note{position:relative;background:color-mix(in srgb,var(--highlight) 55%,var(--paper,#fff));border:2px solid var(--ink);border-radius:6px 14px 8px 12px;padding:22px 20px 16px;margin:20px 0;transform:rotate(-0.8deg);box-shadow:3px 4px 0 rgba(0,0,0,.12)}
+.coach-note .ui-tape{position:absolute;top:-12px;left:40%}
+.coach-title{font-family:var(--font-hand);font-size:30px;margin:0 0 8px;color:var(--ink)}
+.coach-load{font-family:var(--font-hand);font-size:20px;color:var(--ink-soft)}
+.coach-item{padding:8px 0;border-top:1.5px dashed var(--ink-soft)}
+.coach-item:first-of-type{border-top:0}
+.coach-pat{font-size:17px;color:var(--ink);margin:0}
+.coach-tip{font-size:15px;color:var(--ink-soft);margin:2px 0 8px}
+.coach-acts{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.coach-got{background:none;border:0;padding:0;font-family:var(--font-hand);font-size:20px;color:var(--ink-soft);text-decoration:underline;cursor:pointer}

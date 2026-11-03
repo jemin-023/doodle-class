@@ -87,3 +87,8 @@ docs/ARCHITECTURE.md
 ## Credits
 
 Inspired by PenEcho's idea of a hand-writing virtual teacher. No PenEcho code was used; this is an independent implementation, which keeps us clear of its AGPL license. rough.js is MIT licensed.
+
+## Also in this build
+- **Bring your syllabus:** upload a PDF or text syllabus (parsed in the browser with pdf.js). `sarvam-105b` turns it into a personal book of chapters, each ending in a boss battle.
+- **Mistake memory:** every wrong answer is logged. `/api/coach` groups the mistakes into recurring patterns (for example, "adds denominators when adding fractions"). The teacher brings these up on the home page with a one-tap lesson to fix each one.
+- **Chapters and boss battles:** XP, levels, chapters that unlock in order, and a timed boss quiz with hearts and an HP bar at the end of each chapter.

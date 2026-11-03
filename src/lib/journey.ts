@@ -1,6 +1,6 @@
 export interface BossDef { name: string; taunt: string; color: string; kind: 'blob' | 'cloud' | 'octopus' }
 export interface Chapter { title: string; topics: string[]; boss: BossDef }
-export interface Book { characterId: string; chapters: Chapter[] }
+export interface Book { characterId: string; chapters: Chapter[]; teacherId?: string; title?: string; subject?: string }
 
 const BOOKS: Record<string, Chapter[]> = {
   tara: [
@@ -25,7 +25,20 @@ const BOOKS: Record<string, Chapter[]> = {
   ],
 }
 
-export const getBook = (characterId: string): Book => ({ characterId, chapters: BOOKS[characterId] ?? BOOKS.tara })
+const CUSTOM_KEY = 'doodle-class:custom-book'
+export interface CustomBook { title: string; subject: string; characterId: string; chapters: Chapter[] }
+export function saveCustomBook(book: CustomBook): void { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(book)) } catch { /* ignore */ } }
+export function getCustomBook(): CustomBook | null {
+  try { const b = JSON.parse(localStorage.getItem(CUSTOM_KEY) || ''); if (b && Array.isArray(b.chapters) && b.chapters.length) return b } catch { /* ignore */ }
+  return null
+}
+export const getBook = (characterId: string): Book => {
+  if (characterId === 'mine') {
+    const c = getCustomBook()
+    if (c) return { characterId: 'mine', teacherId: c.characterId, title: c.title, subject: c.subject, chapters: c.chapters }
+  }
+  return { characterId, chapters: BOOKS[characterId] ?? BOOKS.tara }
+}
 
 interface State { topics: Record<string, string[]>; bosses: Record<string, number[]>; xp: number }
 const KEY = 'doodle-journey-v1'
@@ -47,6 +60,8 @@ export function markTopicDoneByTopic(topic: string): void {
       markTopicDone(id, real); return
     }
   }
+  const cb = getCustomBook(); const real = cb?.chapters.flatMap(c => c.topics).find(x => x.toLowerCase() === t)
+  if (real) markTopicDone('mine', real)
 }
 export const isTopicDone = (characterId: string, topic: string) => (load().topics[characterId] ?? []).includes(topic)
 export const isBossDefeated = (characterId: string, ch: number) => (load().bosses[characterId] ?? []).includes(ch)

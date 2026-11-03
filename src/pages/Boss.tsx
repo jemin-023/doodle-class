@@ -17,7 +17,8 @@ const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
 export default function Boss() {
   const { characterId = 'tara', chapter = '0' } = useParams()
   const nav = useNavigate()
-  const ch = getCharacter(characterId)
+  const tid = getBook(characterId).teacherId ?? characterId
+  const ch = getCharacter(tid)
   const ci = Number(chapter) || 0
   const chap = getBook(characterId).chapters[ci] ?? getBook(characterId).chapters[0]
   const boss = chap.boss
@@ -147,7 +148,7 @@ export default function Boss() {
                 <div className="gm-bubble" aria-live="polite">{say}</div>
               </div>
             </div>
-            <div className="gm-teacher"><Character id={characterId} size={90} mood={cheer === 'idle' ? 'idle' : cheer} /></div>
+            <div className="gm-teacher"><Character id={tid} size={90} mood={cheer === 'idle' ? 'idle' : cheer} /></div>
           </>
         )}
         {done && (

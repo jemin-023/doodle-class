@@ -1,3 +1,46 @@
-// STUB — owned by Agent N (mistake memory).
 export interface Misconception { concept: string; pattern: string; tip: string; topic: string; characterId: string; count: number }
-export function getMisconceptions(): Misconception[] { return [] }
+const MKEY = 'doodle-class:memory'
+const AKEY = 'doodle-class:answers:v1'
+interface Store { list: Misconception[]; analysed: number }
+
+function load(): Store {
+  try {
+    const d = JSON.parse(localStorage.getItem(MKEY) || '')
+    if (d && Array.isArray(d.list)) return { list: d.list, analysed: Number(d.analysed) || 0 }
+  } catch { /* ignore */ }
+  return { list: [], analysed: 0 }
+}
+function save(s: Store) { try { localStorage.setItem(MKEY, JSON.stringify(s)) } catch { /* ignore */ } }
+
+function wrongAnswers(): { topic: string; prompt: string; answer: string; characterId: string }[] {
+  try {
+    const d = JSON.parse(localStorage.getItem(AKEY) || '[]')
+    return (Array.isArray(d) ? d : []).filter(r => r && r.correct === false)
+  } catch { return [] }
+}
+
+export function getMisconceptions(): Misconception[] { return load().list }
+export function rememberedCount(): number { return load().list.length }
+
+export function markFixed(concept: string): void {
+  const s = load()
+  s.list = s.list.filter(m => m.concept !== concept)
+  save(s)
+}
+
+export async function refreshMemory(): Promise<Misconception[]> {
+  const s = load()
+  const wrong = wrongAnswers()
+  if (wrong.length === 0 || wrong.length === s.analysed) return s.list
+  try {
+    const r = await fetch('/api/coach', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mistakes: wrong.slice(-30) }),
+    })
+    if (!r.ok) throw new Error(String(r.status))
+    const j = await r.json()
+    const list: Misconception[] = Array.isArray(j.misconceptions) ? j.misconceptions : []
+    save({ list, analysed: wrong.length })
+    return list
+  } catch { return s.list }
+}

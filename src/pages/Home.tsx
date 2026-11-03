@@ -5,6 +5,7 @@ import type { LanguageCode } from '../types'
 import Character, { CharacterAvatar } from '../components/Characters/Character'
 import { SketchButton, SketchCard, Scribble, Icon, TopBar, Chip, TextInput } from '../components/ui'
 import { getHistory, getTotalStars } from '../lib/progress'
+import CoachCard from '../components/Coach/CoachCard'
 import './pages.css'
 
 const SUGGESTIONS: Record<string, string[]> = {
@@ -54,6 +55,8 @@ export default function Home() {
           <h1>What do you want to <span className="pg-scribbled">learn<span className="pg-scribble"><Scribble kind="underline" color="var(--marker-red)" width={160} height={14} /></span></span> today?</h1>
           <p className="pg-sub">Pick a teacher, name a topic, and watch the lesson get written out for you.</p>
         </header>
+
+        <CoachCard />
 
         <section aria-labelledby="pg-teach">
           <h2 id="pg-teach" className="pg-h2">Pick your teacher</h2>
@@ -111,8 +114,10 @@ export default function Home() {
           </div>
         </section>
 
-        <p style={{ fontFamily: 'var(--font-hand)', fontSize: 24, margin: '24px 0 0' }}>
+        <p style={{ fontFamily: 'var(--font-hand)', fontSize: 24, margin: '24px 0 0', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <Link to="/progress" style={{ color: 'var(--marker-blue)' }}>See my progress →</Link>
+          <Link to={`/journey/${cid}`} style={{ color: 'var(--marker-blue)' }}>My chapter map →</Link>
+          <Link to="/syllabus" style={{ color: 'var(--marker-blue)' }}>Upload my syllabus →</Link>
         </p>
 
         {history.length > 0 && (

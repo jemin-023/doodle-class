@@ -20,8 +20,9 @@ function Lock({ x, y }: { x: number; y: number }) {
 export default function Journey() {
   const { characterId = 'tara' } = useParams()
   const nav = useNavigate()
-  const ch = getCharacter(characterId)
   const book = getBook(characterId)
+  const tid = book.teacherId ?? characterId
+  const ch = getCharacter(tid)
   let currentFound = false
 
   return (
@@ -34,7 +35,7 @@ export default function Journey() {
           const open = isChapterUnlocked(characterId, ci)
           const bossOpen = isBossUnlocked(characterId, ci)
           const beaten = isBossDefeated(characterId, ci)
-          const goTopic = (t: string) => open && nav(`/learn/${characterId}?topic=${encodeURIComponent(t)}&lang=en-IN&grade=5`)
+          const goTopic = (t: string) => open && nav(`/learn/${tid}?topic=${encodeURIComponent(t)}&lang=en-IN&grade=5`)
           return (
             <section key={ci} className={`gm-chapter ${open ? '' : 'is-locked'}`}>
               <SketchCard tilt={ci % 2 ? 0.4 : -0.4} color={open ? ch.color : undefined}>
@@ -56,7 +57,7 @@ export default function Journey() {
                         {!done && !open && <Lock x={x} y={y} />}
                         {!done && open && <text x={x} y={y + 7} textAnchor="middle" className="gm-label" style={{ fontSize: 22 }}>{ti + 1}</text>}
                         <text x={x} y={y + 46} textAnchor="middle" className="gm-label">{t.length > 24 ? t.slice(0, 22) + '…' : t}</text>
-                        {current && <foreignObject x={x + 24} y={y - 52} width={50} height={50}><CharacterAvatar id={characterId} size={44} /></foreignObject>}
+                        {current && <foreignObject x={x + 24} y={y - 52} width={50} height={50}><CharacterAvatar id={tid} size={44} /></foreignObject>}
                       </g>
                     )
                   })}
