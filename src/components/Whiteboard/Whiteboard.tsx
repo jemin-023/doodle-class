@@ -294,7 +294,9 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
     doneRef.current?.()
   }, [])
 
-  const rawText = item.kind === 'drawing' ? '' : item.text
+  const rawText0 = item.kind === 'drawing' ? '' : item.text
+  // bare LaTeX (no $...$) in a text-like item: treat the whole line as inline math
+  const rawText = item.kind !== 'equation' && item.kind !== 'title' && item.kind !== 'drawing' && !rawText0.includes('$') && /\\[a-zA-Z]+/.test(rawText0) ? '$' + rawText0 + '$' : rawText0
   const segs = useMemo(() => parseRich(rawText, item.kind === 'equation' ? 'equation' : 'text'), [rawText, item.kind])
   const text = useMemo(() => segs.map(g => g.text).join(''), [segs])
   const chars = useMemo(() => Array.from(text), [text])
