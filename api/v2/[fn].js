@@ -7,6 +7,8 @@ const H = {
   translate: () => import('../_translate.js'),
   report: () => import('../_report.js'),
   room: () => import('../_room.js'),
+  ncert: () => import('../_ncert.js'),
+  deep: () => import('../_deep.js'),
 }
 export default async function handler(req, res) {
   const fn = String(req.query?.fn || '').toLowerCase()

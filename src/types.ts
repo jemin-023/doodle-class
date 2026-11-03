@@ -20,7 +20,22 @@ export type BoardItem =
 export interface LessonStep {
   say: string            // what the character narrates (spoken via TTS)
   board: BoardItem[]     // what gets hand-written on the whiteboard during this step
+  covers?: number[]      // deep (NCERT) lessons: OutlineItem ids this step teaches
 }
+
+// ---- Round 4: NCERT books + deep lessons (see docs/PLAN.md "Round 4") ----
+/** A place in an NCERT book. file = chapter PDF code, e.g. 'jesc101' (class 10 Science ch 1); sec = section id, absent = whole chapter. */
+export interface NcertRef { file: string; sec?: string }
+export interface OutlineItem { id: number; kind: 'point' | 'example' | 'activity'; text: string }
+export interface CatalogSection { id: string; title: string }
+export interface CatalogChapter { n: number; file: string; title: string; sections: CatalogSection[] }
+export interface CatalogBook { code: string; title: string; medium: 'en' | 'hi'; chapters: CatalogChapter[] }
+export interface CatalogSubject { id: string; name: string; books: CatalogBook[] }
+export interface CatalogClass { grade: number; subjects: CatalogSubject[] }
+export interface NcertCatalog { generatedAt: string; classes: CatalogClass[] }
+/** Deep lesson request: POST /api/v2/deep, NDJSON response (meta with outline, steps with covers, done with optional next). */
+export interface DeepRequest { ncert: NcertRef; characterId: string; language: LanguageCode; grade: number; from?: number }
+export interface DeepMeta { topic: string; subject: string; outline: OutlineItem[]; source: { grade: number; subject: string; book: string; chapter: string; section?: string } }
 
 export interface Lesson {
   topic: string
@@ -60,4 +75,4 @@ export interface LessonRequest {
   /** Optional source text (e.g. OCR of a textbook page) the lesson must be grounded in. <= 6000 chars. Never cached. */
   source?: string
 }
-export interface QuizRequest { topic: string; language: LanguageCode; grade: number; lesson?: Lesson; source?: string }
+export interface QuizRequest { topic: string; language: LanguageCode; grade: number; lesson?: Lesson; source?: string; ncert?: NcertRef }

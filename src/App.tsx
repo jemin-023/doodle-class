@@ -15,6 +15,7 @@ import ParentReport from './pages/ParentReport'
 import ClassHost from './pages/ClassHost'
 import ClassJoin from './pages/ClassJoin'
 import DevDiagrams from './pages/DevDiagrams'
+import Study from './pages/Study'
 export default function App() {
   return (
     <>
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/practice" element={<QuickQuiz />} />
       <Route path="/talk/:characterId" element={<Talk />} />
+      <Route path="/study" element={<Study />} />
       <Route path="/snap" element={<Snap />} />
       <Route path="/family-voice" element={<FamilyVoice />} />
       <Route path="/parent" element={<ParentReport />} />
