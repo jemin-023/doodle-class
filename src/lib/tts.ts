@@ -81,9 +81,10 @@ export async function speak(text: string, opts: Opts): Promise<void> {
       })
       if (!r.ok) throw new Error('tts ' + r.status)
       const j = await r.json()
-      chunks = Array.isArray(j.audio) ? j.audio : typeof j.audio === 'string' ? [j.audio] : []
-      if (!chunks.length) throw new Error('no audio')
-      cache.set(key, chunks)
+      const got: string[] = Array.isArray(j.audio) ? j.audio : typeof j.audio === 'string' ? [j.audio] : []
+      chunks = got
+      if (!got.length) throw new Error('no audio')
+      cache.set(key, got)
     } catch {
       chunks = undefined
     }

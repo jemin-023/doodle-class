@@ -1,0 +1,85 @@
+/* Doodle Class UI kit. Prefix ui- */
+
+/* Button */
+.ui-btn {
+  --btn-color: var(--ink);
+  font-family: var(--font-body); font-weight: 700; font-size: 1rem; line-height: 1.2;
+  padding: 10px 20px; border: 2px solid var(--ink); color: var(--ink); background: transparent;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .12s ease, box-shadow .12s ease; cursor: pointer;
+}
+.ui-btn-primary { background: var(--btn-color); border-color: var(--ink); color: var(--paper); }
+.ui-btn-ghost { background: transparent; color: var(--ink); }
+.ui-btn:hover:not(:disabled) { transform: rotate(-1deg) translateY(-1px); box-shadow: 3px 3px 0 var(--ink); }
+.ui-btn:active:not(:disabled) { transform: rotate(0) translateY(1px); box-shadow: 0 0 0 var(--ink); }
+.ui-btn:focus-visible { outline: 2px dashed var(--ink); outline-offset: 4px; }
+.ui-btn:disabled { opacity: .45; cursor: not-allowed; border-style: dashed; }
+
+/* Card */
+.ui-card { position: relative; background: var(--board); padding: 20px 22px; border-radius: var(--radius); }
+.ui-card-border { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.ui-card-body { position: relative; }
+.ui-card-tape { position: absolute; top: -14px; left: 50%; margin-left: -45px; z-index: 2; }
+
+/* Tape */
+.ui-tape {
+  display: block; width: 90px; height: 26px; background: var(--tape);
+  clip-path: polygon(0 6%, 4% 0, 7% 12%, 11% 2%, 93% 0, 96% 14%, 100% 4%, 98% 50%, 100% 92%, 95% 100%, 91% 88%, 87% 100%, 8% 98%, 4% 88%, 0 96%, 3% 50%);
+  pointer-events: none;
+}
+
+/* Scribble */
+.ui-scribble { display: inline-block; overflow: visible; }
+.ui-scribble-path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: ui-draw .7s ease-out forwards; }
+@keyframes ui-draw { to { stroke-dashoffset: 0; } }
+
+/* Icon */
+.ui-icon { display: inline-block; flex: none; vertical-align: middle; }
+
+/* Progress dots */
+.ui-dots { display: flex; gap: 6px; align-items: center; color: var(--ink-faint); }
+.ui-dot.is-done { color: var(--ink); }
+.ui-dot.is-done .ui-dot-fill { stroke: var(--marker-blue); }
+.ui-dot.is-now { color: var(--ink); }
+.ui-dot.is-now .ui-dot-ring { stroke: var(--marker-red); stroke-dasharray: 1; }
+.ui-dot-ring { animation: ui-draw .5s ease-out both; }
+.ui-dot-ring { stroke-dasharray: 80; stroke-dashoffset: 80; animation-name: ui-draw80; }
+@keyframes ui-draw80 { to { stroke-dashoffset: 0; } }
+
+/* Top bar */
+.ui-topbar { width: 100%; max-width: 1200px; margin: 0 auto; padding: 8px 16px 0; position: relative; }
+.ui-topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; }
+.ui-wordmark { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-hand); font-weight: 700; font-size: 1.9rem; line-height: 1; color: var(--ink); text-decoration: none; }
+.ui-wordmark .ui-icon { transform: rotate(-8deg); }
+.ui-wordmark:focus-visible { outline: 2px dashed var(--ink); outline-offset: 4px; }
+.ui-topbar-right { display: flex; align-items: center; gap: 10px; }
+.ui-topbar-wave { display: block; width: 100%; height: 8px; margin-top: 4px; }
+
+/* Chip */
+.ui-chip {
+  --chip-color: var(--ink);
+  font-family: var(--font-body); font-weight: 700; font-size: .95rem; color: var(--ink);
+  padding: 6px 16px; background: transparent; border: 2px solid var(--chip-color);
+  border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  transition: transform .12s ease, background-color .12s ease;
+}
+.ui-chip:nth-child(even) { border-radius: 18px 225px 18px 255px / 225px 18px 255px 18px; }
+.ui-chip:hover { transform: rotate(-1deg) translateY(-1px); }
+.ui-chip.is-selected { background: var(--highlight); }
+.ui-chip:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
+
+/* Text input */
+.ui-input-wrap { position: relative; display: block; color: var(--ink); }
+.ui-input {
+  display: block; width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink);
+  font-family: var(--font-hand); font-size: 1.8rem; line-height: 1.3; padding: 4px 2px 10px; border-radius: 0;
+}
+.ui-input::placeholder { color: var(--ink-faint); }
+.ui-input-line { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 8px; pointer-events: none; transition: color .15s; }
+.ui-input-wrap:focus-within { color: var(--marker-blue); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-scribble-path, .ui-dot-ring { animation: none; stroke-dashoffset: 0; }
+  .ui-btn, .ui-chip { transition: none; }
+}
