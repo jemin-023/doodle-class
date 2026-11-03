@@ -174,7 +174,7 @@ function wordsToText(tex: string): string {
   })
 }
 /** Human-readable fallback when KaTeX cannot parse: never show raw LaTeX source on the board. */
-function plainMath(t: string): string {
+export function plainMath(t: string): string {
   return t.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2').replace(/\\sqrt\s*\{([^{}]*)\}/g, '√$1')
     .replace(/\\(times|cdot)/g, '×').replace(/\\div/g, '÷').replace(/\\theta/g, 'θ').replace(/\\pi/g, 'π')
     .replace(/\\text\s*\{([^{}]*)\}/g, '$1').replace(/\\[a-zA-Z]+/g, '').replace(/[{}$]/g, '').replace(/\s+/g, ' ').trim()

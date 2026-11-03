@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Whiteboard from '../components/Whiteboard/Whiteboard'
 import Character from '../components/Characters/Character'
+import DownloadNotesButton from '../components/Whiteboard/DownloadNotes'
 import { SketchButton, TextInput, TopBar } from '../components/ui'
 import { getCharacter } from '../characters/registry'
 import * as sttMod from '../lib/stt'
@@ -147,7 +148,21 @@ export default function Talk() {
   return (
     <div className="talk">
       <TopBar>
-        <SketchButton variant="ghost" onClick={() => nav('/')}>Back</SketchButton>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <SketchButton variant="ghost" onClick={() => nav('/')}>Back</SketchButton>
+          {steps.length > 0 && (
+            <DownloadNotesButton
+              steps={steps}
+              currentStep={steps.length - 1}
+              topic={`Conversation with ${ch.name}`}
+              character={ch}
+              grade={grade}
+              language={language}
+              variant="ghost"
+              label="Download notes"
+            />
+          )}
+        </div>
         <span className="talk-title">Talk to {ch.name}</span>
       </TopBar>
       <div className="talk-main">

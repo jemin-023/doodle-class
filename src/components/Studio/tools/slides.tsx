@@ -6,6 +6,7 @@ import { spreadChunks } from '../../../lib/notebook/retrieve'
 import { nbPost } from '../../../lib/notebook/ai'
 import { speak, stopSpeaking } from '../../../lib/tts'
 import Whiteboard from '../../Whiteboard/Whiteboard'
+import DownloadNotesButton from '../../Whiteboard/DownloadNotes'
 import { SketchButton, Icon, ProgressDots } from '../../ui'
 import './studio.css'
 
@@ -280,6 +281,15 @@ function SlidesToolComponent({ notebook, saveOutput, output }: StudioToolProps) 
                   <span>{muted ? 'Unmute' : 'Mute'}</span>
                 </span>
               </SketchButton>
+
+              <DownloadNotesButton
+                steps={data.slides}
+                currentStep={currentStep}
+                topic={data.title}
+                character={character}
+                variant="ghost"
+                label="Download notes"
+              />
             </div>
 
             <SketchButton variant="ghost" onClick={() => setData(null)}>

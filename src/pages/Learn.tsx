@@ -23,6 +23,7 @@ import { streamDeepLesson } from '../lib/deep'
 import Outline from '../components/Outline/Outline'
 import InkLayer, { InkCard } from '../components/Ink/Ink'
 import type { InkHit } from '../components/Ink/hit'
+import DownloadNotesButton from '../components/Whiteboard/DownloadNotes'
 
 const ACK = 'Good question! Let me show you.'
 
@@ -647,6 +648,19 @@ export default function Learn() {
             {steps.length > 0 && started && (
               <Whiteboard steps={steps} currentStep={step} accent={ch.color} onStepWritten={onWritten} speed={speed} />
             )}
+            {steps.length > 0 && started && (
+              <DownloadNotesButton
+                steps={steps}
+                currentStep={step}
+                topic={lesson?.topic || topic}
+                subject={lesson?.subject}
+                character={ch}
+                grade={grade}
+                language={lang}
+                variant="badge"
+                label="Board notes"
+              />
+            )}
             {steps.length > 0 && started && <InkLayer host={inkHost} onCircle={onCircle} marked={inkCard?.hit ?? null} />}
           </div>
           <aside className="pg-side">
@@ -706,6 +720,19 @@ export default function Learn() {
                 <div className="pg-extras">
                   {lesson && <LangSwitch lesson={lesson} current={lang} disabled={streaming} onSwitch={switchLanguage} {...boardOpt} />}
                   <ShareButton topic={lesson?.topic || topic} characterId={characterId} language={urlLang} grade={grade} />
+                  {steps.length > 0 && (
+                    <DownloadNotesButton
+                      steps={steps}
+                      currentStep={step}
+                      topic={lesson?.topic || topic}
+                      subject={lesson?.subject}
+                      character={ch}
+                      grade={grade}
+                      language={lang}
+                      variant="ghost"
+                      label="Download notes"
+                    />
+                  )}
                   {!streaming && steps.length > 0 && (
                     <SketchButton
                       variant="ghost"
@@ -774,6 +801,19 @@ export default function Learn() {
                   )
                 )}
                 {finished && lesson && <TeachBack lesson={lesson} characterId={characterId} language={lang} grade={grade} onCorrection={insertStep} {...boardOpt} />}
+                {finished && steps.length > 0 && (
+                  <DownloadNotesButton
+                    steps={steps}
+                    currentStep={step}
+                    topic={lesson?.topic || topic}
+                    subject={lesson?.subject}
+                    character={ch}
+                    grade={grade}
+                    language={lang}
+                    variant="ghost"
+                    label="Download Board Notes"
+                  />
+                )}
                 {finished && <SketchButton onClick={toQuiz}>Test yourself →</SketchButton>}
                 {fallback && <div className="pg-note">offline sample lesson</div>}
               </>
