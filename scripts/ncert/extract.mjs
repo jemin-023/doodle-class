@@ -228,6 +228,8 @@ export async function extractChapter(data, meta = {}) {
     out = [all]
   }
   if (!title || title.length < 3) title = `Chapter ${meta.n || parseInt(String(meta.file || '').slice(-2), 10) || ''}`.trim()
+  const seenIds = {}   // section ids must be unique within a chapter (books sometimes repeat a number)
+  for (const s of out) { seenIds[s.id] = (seenIds[s.id] || 0) + 1; if (seenIds[s.id] > 1) s.id = `${s.id}-${seenIds[s.id]}` }
   return { file: meta.file, grade: meta.grade, subject: meta.subject, book: meta.book, title, sections: out.map(({ id, title, text, examples, activities }) => ({ id, title, text, examples, activities })) }
 }
 
