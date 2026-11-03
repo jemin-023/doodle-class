@@ -9,7 +9,58 @@
 .pf-stat b { display: block; font-family: var(--font-hand); font-size: 2rem; line-height: 1; }
 .pf-bar { height: 16px; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; background: transparent; }
 .pf-bar > i { display: block; height: 100%; background: var(--marker-blue); }
+
+/* ---- Badges shelf ---- */
 .pf-badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.pf-badge { text-align: center; font-family: var(--font-hand); font-size: 1.05rem; opacity: .35; filter: grayscale(1); }
+@media (max-width: 480px) { .pf-badges { grid-template-columns: repeat(2, 1fr); } }
+.pf-badge { text-align: center; font-family: var(--font-hand); font-size: 1.05rem; opacity: .35; filter: grayscale(1); transition: opacity .2s, filter .2s; }
 .pf-badge.on { opacity: 1; filter: none; }
-.pf-badge svg { width: 72px; height: 72px; }
+.pf-badge svg { width: 72px; height: 72px; margin: 0 auto; display: block; }
+.pf-badge-desc { font-family: var(--font-body); font-size: 0.75rem; color: var(--ink-soft); margin-top: 2px; line-height: 1.2; }
+
+/* ---- Rewards shop ---- */
+.pf-shop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.pf-shop-stars { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-hand); font-size: 1.3rem; font-weight: 700; color: var(--saffron); background: var(--paper-2); padding: 4px 12px; border: 2px solid var(--ink); border-radius: 20px; }
+.pf-shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; }
+.pf-shop-card { border: 2px solid var(--ink); border-radius: 12px; padding: 10px; background: var(--board, #fff); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; box-shadow: var(--shadow); }
+.pf-shop-preview { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+.pf-shop-title { font-family: var(--font-hand); font-size: 1.15rem; font-weight: 700; line-height: 1.1; margin: 0; }
+.pf-shop-cost { font-family: var(--font-hand); font-size: 1rem; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
+.pf-shop-btn { width: 100%; margin-top: auto; font-size: 0.95rem; padding: 6px 8px; }
+
+/* ---- Grown-ups section & Parent gate ---- */
+.pf-grownups { margin-top: 28px; }
+.pf-gate-wrap { border: 2px dashed var(--ink-soft); border-radius: 14px; padding: 20px; background: var(--paper-2); text-align: center; }
+.pf-gate-head { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-hand); font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.pf-gate-p { font-size: 0.95rem; color: var(--ink-soft); margin: 0 0 16px; }
+.pf-gate-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; max-width: 520px; margin: 0 auto; text-align: left; }
+@media (max-width: 600px) { .pf-gate-actions { grid-template-columns: 1fr; } }
+.pf-gate-box { border: 2px solid var(--ink); border-radius: 10px; padding: 12px; background: var(--board, #fff); display: flex; flex-direction: column; gap: 8px; }
+.pf-gate-box-title { font-family: var(--font-hand); font-size: 1.15rem; font-weight: 700; }
+.pf-hold-btn { position: relative; overflow: hidden; padding: 10px; width: 100%; text-align: center; font-family: var(--font-hand); font-size: 1.1rem; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); cursor: pointer; user-select: none; }
+.pf-hold-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--marker-yellow); z-index: 1; transition: width 0.1s linear; }
+.pf-hold-text { position: relative; z-index: 2; font-weight: 700; }
+.pf-math-row { display: flex; gap: 6px; align-items: center; }
+.pf-math-row input { max-width: 80px; }
+
+.pf-adult-panel { display: flex; flex-direction: column; gap: 20px; }
+.pf-adult-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 2px dashed var(--rule); padding-bottom: 10px; }
+.pf-adult-top h3 { margin: 0; }
+.pf-adult-sub { font-family: var(--font-hand); font-size: 1.25rem; font-weight: 700; margin: 0 0 6px; }
+.pf-toggles { display: flex; flex-direction: column; gap: 10px; }
+.pf-toggle { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.95rem; }
+.pf-toggle input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--peacock); cursor: pointer; margin-top: 2px; }
+.pf-toggle-info b { display: block; font-family: var(--font-hand); font-size: 1.15rem; color: var(--ink); }
+.pf-toggle-info span { font-size: 0.85rem; color: var(--ink-soft); display: block; }
+
+.pf-blocked-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pf-tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1.5px solid var(--ink); border-radius: 16px; background: var(--board, #fff); font-size: 0.9rem; }
+.pf-tag button { background: none; border: none; padding: 0; cursor: pointer; color: var(--bad); font-weight: 700; line-height: 1; }
+
+/* Reduced motion accessibility rule */
+html.a11y-reduced-motion *,
+html.a11y-reduced-motion *::before,
+html.a11y-reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}

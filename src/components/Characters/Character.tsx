@@ -4,7 +4,7 @@ import { onSpeechLevel } from '../../lib/tts'
 import type { Mood } from '../../types'
 import './characters.css'
 
-export interface CharacterProps { id: string; mood?: Mood; size?: number; className?: string }
+export interface CharacterProps { id: string; mood?: Mood; size?: number; className?: string; accessory?: string }
 
 const INK = '#23211e'
 const S = { stroke: INK, strokeWidth: 3, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
@@ -191,7 +191,67 @@ const ARTS: Record<string, Art> = {
 
 function artFor(id: string): Art { return ARTS[id] ?? ARTS.tara }
 
-export default function Character({ id, mood = 'idle', size = 160, className }: CharacterProps) {
+function AccessoryArt({ kind }: { kind?: string }) {
+  if (!kind) return null
+  switch (kind) {
+    case 'hat':
+      return (
+        <g className="ch-acc ch-acc-hat">
+          <ellipse cx="100" cy="40" rx="30" ry="7" fill="#23211e" stroke={INK} strokeWidth="2.5" />
+          <path d="M82 38 L85 14 C90 12 110 12 115 14 L118 38 Z" fill="#23211e" stroke={INK} strokeWidth="2.5" />
+          <path d="M83 32 Q100 34 117 32" stroke="#d9472b" strokeWidth="3" fill="none" strokeLinecap="round" />
+        </g>
+      )
+    case 'crown':
+      return (
+        <g className="ch-acc ch-acc-crown">
+          <path d="M76 40 L72 18 L86 28 L100 14 L114 28 L128 18 L124 40 Z" fill="#f4d35e" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+          <circle cx="100" cy="22" r="3" fill="#d9472b" stroke={INK} strokeWidth="1" />
+          <circle cx="86" cy="30" r="2.5" fill="#2f5fd0" stroke={INK} strokeWidth="1" />
+          <circle cx="114" cy="30" r="2.5" fill="#2f8a4c" stroke={INK} strokeWidth="1" />
+        </g>
+      )
+    case 'glasses':
+      return (
+        <g className="ch-acc ch-acc-glasses" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="83" cy="82" r="14" fill="rgba(255, 255, 255, 0.45)" />
+          <circle cx="117" cy="82" r="14" fill="rgba(255, 255, 255, 0.45)" />
+          <path d="M97 81 Q100 77 103 81" />
+          <path d="M69 82 L56 78 M131 82 L144 78" />
+        </g>
+      )
+    case 'scarf':
+      return (
+        <g className="ch-acc ch-acc-scarf">
+          <path d="M72 126 Q100 142 128 126 C134 135 128 145 116 148 Q100 154 84 148 C72 144 66 135 72 126 Z" fill="#d9472b" stroke={INK} strokeWidth="2.5" />
+          <path d="M108 144 L112 176 L124 174 L118 142 Z" fill="#d9472b" stroke={INK} strokeWidth="2.5" />
+          <path d="M112 173 L124 171" stroke="#ffe066" strokeWidth="2.5" />
+        </g>
+      )
+    case 'flower':
+      return (
+        <g className="ch-acc ch-acc-flower" transform="translate(126, 42)">
+          <circle cx="-6" cy="0" r="5.5" fill="#f4d35e" stroke={INK} strokeWidth="1.5" />
+          <circle cx="6" cy="0" r="5.5" fill="#f4d35e" stroke={INK} strokeWidth="1.5" />
+          <circle cx="0" cy="-6" r="5.5" fill="#f4d35e" stroke={INK} strokeWidth="1.5" />
+          <circle cx="0" cy="6" r="5.5" fill="#f4d35e" stroke={INK} strokeWidth="1.5" />
+          <circle cx="0" cy="0" r="5" fill="#e8674a" stroke={INK} strokeWidth="1.5" />
+        </g>
+      )
+    case 'cap':
+      return (
+        <g className="ch-acc ch-acc-cap">
+          <path d="M74 42 C76 18 124 18 126 42 Z" fill="#2f5fd0" stroke={INK} strokeWidth="2.5" />
+          <path d="M116 42 C128 42 146 46 144 52 C134 54 120 48 114 44 Z" fill="#23211e" stroke={INK} strokeWidth="2" />
+          <circle cx="100" cy="20" r="3" fill="#ffe066" stroke={INK} strokeWidth="1.5" />
+        </g>
+      )
+    default:
+      return null
+  }
+}
+
+export default function Character({ id, mood = 'idle', size = 160, className, accessory }: CharacterProps) {
   const a = artFor(id)
   return (
     <svg
@@ -199,7 +259,7 @@ export default function Character({ id, mood = 'idle', size = 160, className }: 
       width={size} height={size} viewBox="0 0 200 200" role="img" aria-label={`${id} the teacher`}
     >
       <g className="ch-all">
-        <g className="ch-body-g">{a.body}<Face f={a.face} mood={mood} /></g>
+        <g className="ch-body-g">{a.body}<Face f={a.face} mood={mood} /><AccessoryArt kind={accessory} /></g>
         {mood === 'happy' && <Sparkles />}
         {mood === 'thinking' && <Thinking />}
       </g>
@@ -207,12 +267,12 @@ export default function Character({ id, mood = 'idle', size = 160, className }: 
   )
 }
 
-export function CharacterAvatar({ id, size = 56 }: { id: string; size?: number }) {
+export function CharacterAvatar({ id, size = 56, accessory }: { id: string; size?: number; accessory?: string }) {
   const a = artFor(id)
   return (
     <span className="ch-avatar" style={{ width: size, height: size, background: a.tint }}>
       <svg className="ch ch-idle ch-static" width={size} height={size} viewBox={a.crop} aria-hidden="true">
-        <g className="ch-body-g">{a.body}<Face f={a.face} mood="idle" /></g>
+        <g className="ch-body-g">{a.body}<Face f={a.face} mood="idle" /><AccessoryArt kind={accessory} /></g>
       </svg>
     </span>
   )

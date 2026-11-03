@@ -83,3 +83,35 @@ body::before {
 .dc-sarvam svg { flex: none; }
 @media (max-width: 520px) { .dc-sarvam { font-size: 1rem; right: 8px; bottom: 8px; padding: 4px 10px; } }
 body { padding-bottom: 56px; } /* room to scroll content clear of the fixed badge */
+
+/* Accessibility overrides (w3profile) */
+html.a11y-dyslexia {
+  --font-body: 'OpenDyslexic', 'Comic Sans MS', sans-serif;
+  letter-spacing: 0.05em;
+  word-spacing: 0.1em;
+}
+html.a11y-dyslexia body,
+html.a11y-dyslexia button,
+html.a11y-dyslexia input,
+html.a11y-dyslexia select,
+html.a11y-dyslexia textarea {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+  letter-spacing: 0.05em;
+  word-spacing: 0.1em;
+  line-height: 1.7;
+}
+
+html.a11y-large {
+  font-size: 20px;
+}
+
+html.a11y-contrast {
+  --paper: #ffffff;
+  --paper-2: #eeeeee;
+  --ink: #000000;
+  --ink-soft: #111111;
+  --ink-faint: #333333;
+  --rule: #666666;
+  --shadow: 3px 3px 0 #000000;
+}
+
