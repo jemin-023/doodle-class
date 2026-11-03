@@ -117,7 +117,7 @@ export default async function handler(req, res) {
       let sections = ch.sections || []
       if (b.sec) {
         const secId = String(b.sec)
-        sections = sections.filter((s) => s.id === secId)
+        sections = sections.filter((s) => s.id === secId || String(s.id).startsWith(secId + '.'))
       }
       let total = 0
       const out = []

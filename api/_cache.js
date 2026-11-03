@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto'
 import { kvGet, kvSet } from './_store.js'
 
-export const PROMPT_VERSION = 'v9'
+export const PROMPT_VERSION = 'v10'
 export const TTL = 30 * 24 * 3600
 const normTopic = t => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 

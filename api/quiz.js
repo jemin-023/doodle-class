@@ -115,7 +115,7 @@ async function ncertContext(ref) {
     if (!ch) return ''
     const secs = Array.isArray(ch.sections) ? ch.sections : []
     const one = ref.sec ? secs.find(x => String(x.id) === String(ref.sec)) : null
-    const parts = one ? [one] : secs
+    const parts = one ? [one, ...secs.filter(x => String(x.id).startsWith(String(one.id) + '.'))] : secs
     const text = parts.map(x => x.text || '').join('\n').replace(/\s+/g, ' ').trim().slice(0, 6000)
     const ex = parts.flatMap(x => x.examples || [])[0]
     if (!text) return ''

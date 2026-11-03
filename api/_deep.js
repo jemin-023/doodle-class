@@ -7,7 +7,7 @@ import { chat, chatStream, extractJSON, parseBody, sanitizeStep, hasKey, LANG_NA
 import { cacheGet, cachePut, inLanguage } from './_cache.js'
 import { translateLesson } from './_translate.js'
 
-const DEEP_V = 'd1'
+const DEEP_V = 'd4'
 const BUDGET_MS = Number(process.env.DC_DEEP_BUDGET) || 35000
 const PLAN_TEXT_CAP = 24000
 const EXCERPT_CAP = 5500
@@ -27,12 +27,13 @@ async function loadChapter(file) {
 function pickPart(ch, sec) {
   const secs = Array.isArray(ch.sections) ? ch.sections : []
   const one = sec ? secs.find(s => String(s.id) === String(sec)) : null
-  const parts = one ? [one] : secs
-  const text = parts.map(s => (secs.length > 1 && !one ? `\n## ${s.id} ${s.title}\n` : '') + (s.text || '')).join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  // a topic includes its subsections (1.2 -> 1.2.1, 1.2.2 ...), which the book numbers separately
+  const parts = one ? [one, ...secs.filter(s => String(s.id).startsWith(String(one.id) + '.'))] : secs
+  const text = parts.map(s => (parts.length > 1 ? `\n## ${s.id} ${s.title}\n` : '') + (s.text || '')).join('\n').replace(/\n{3,}/g, '\n\n').trim()
   const examples = parts.flatMap(s => s.examples || []).filter(e => e && (e.text || e.title))
   const activities = parts.flatMap(s => s.activities || []).filter(e => e && (e.text || e.title))
   return {
-    topic: one ? one.title : ch.title, text, examples, activities,
+    topic: one ? one.title : ch.title, text, examples, activities, sections: parts,
     source: { grade: Number(ch.grade) || 0, subject: String(ch.subject || ''), book: String(ch.book || ''), chapter: String(ch.title || ''), ...(one ? { section: one.title } : {}) },
   }
 }
@@ -108,6 +109,27 @@ ${src}
   return items.map((i, k) => ({ id: k, kind: i.kind, text: i.text, pos: i.pos, ...(i.ex !== undefined ? { ex: i.ex } : {}) }))
 }
 
+/** Book-structured outline (no LLM): each subsection, then its worked examples and activities, in book order.
+ *  Used when the topic has subsections: instant, and faithful to how the book is organised. */
+function structuralPlan(part) {
+  const items = []
+  let exIdx = 0
+  for (const s of part.sections) {
+    items.push({ kind: 'point', text: clip(s.title, 140), anchor: clip(s.text, 80) })
+    for (const e of (s.examples || []).filter(e => e && (e.text || e.title))) { items.push({ kind: 'example', text: clip(e.title ? `${e.title}: ${clip(e.text, 90)}` : e.text, 140), anchor: clip(e.text, 80), ex: exIdx++ }) }
+    for (const a of (s.activities || []).filter(a => a && (a.text || a.title)).slice(0, 2)) { items.push({ kind: 'activity', text: clip(a.title || a.text, 140), anchor: clip(a.text, 80) }) }
+  }
+  let last = 0
+  items.forEach(i => { const p = findAt(part.text, i.anchor); i.pos = p >= last ? p : -1; if (i.pos >= 0) last = i.pos })
+  items.forEach((i, k) => {
+    if (i.pos >= 0) return
+    const prev = [...items.slice(0, k)].reverse().find(x => x.pos >= 0)?.pos ?? 0
+    const next = items.slice(k + 1).find(x => x.pos >= 0)?.pos ?? part.text.length
+    i.pos = Math.round(prev + (next - prev) / 2)
+  })
+  return items.slice(0, 26).map((i, k) => ({ id: k, kind: i.kind, text: i.text, pos: i.pos, ...(i.ex !== undefined ? { ex: i.ex } : {}) }))
+}
+
 const planKey = (rq, sec) => ({ topic: `${rq.file}|${sec || '*'}|plan|${DEEP_V}`, characterId: 'plan', language: rq.boardLanguage, grade: 0 })
 const batchKey = (rq, sec, start, n) => ({ topic: `${rq.file}|${sec || '*'}|b${start}|${n}|${DEEP_V}`, characterId: rq.characterId, language: rq.language, boardLanguage: rq.boardLanguage, grade: rq.grade })
 
@@ -144,6 +166,7 @@ Rules:
 - Stay faithful to the book: same numbers, same method, same terms. Do not invent facts.
 - "say": 2-4 short kid-friendly sentences in ${lang} with a hint of ${name}'s personality. It is spoken aloud: plain words only, no LaTeX, no $ signs, no symbols like \\frac.
 - Each step's "board" has 1-4 items; text short like a teacher writes (max ~10 words). ${BOARD_ITEM_SHAPES}
+- Visuals: for chemistry prefer "equation" items; use a diagram ONLY if its name literally depicts what this step teaches (e.g. "circuit" for an electric circuit, "heart" for the heart). Never use volcano, water-cycle, atom, states-of-matter or any other diagram as a loose metaphor.
 - For a "point": explain it simply, with a rich visual or "highlight" for the key rule/formula. For an "activity": say what to do and what we SEE, then what it shows.
 - For an "example": FIRST step writes the problem on the board ("example" item with the given data), then solve it STEP BY STEP exactly like the book's solution, one line of working per step as "equation" items (valid LaTeX, no $ wrappers; for chemistry use \\text{} / \\ce-free plain LaTeX like 2H_2 + O_2 \\rightarrow 2H_2O), explaining each line in "say". The LAST step of the example puts the final answer in a "highlight".
 - Do NOT greet, say goodbye, thank the class, or recap at the end: more lessons follow right after. Only the very first step of the whole lesson may greet.
@@ -263,7 +286,8 @@ export default async function handler(req, res) {
       if (!hasKey()) throw new Error('no key')
       const tp = Date.now()
       const bl = LANG_NAMES[rq.boardLanguage] || lang
-      try { outline = await plan(part, bl, rq.boardLanguage) } catch (e) { console.warn('[deep] plan retry:', e.message || e); outline = await plan(part, bl, rq.boardLanguage) }
+      if (part.sections.length > 1) outline = structuralPlan(part)
+      else try { outline = await plan(part, bl, rq.boardLanguage) } catch (e) { console.warn('[deep] plan retry:', e.message || e); outline = await plan(part, bl, rq.boardLanguage) }
       if (!inLanguage(outline.map(i => i.text), rq.boardLanguage)) {
         try { const tr = await translateLesson({ steps: outline.map(i => ({ say: i.text, board: [{ kind: 'text', text: i.text }] })) }, rq.boardLanguage); outline = outline.map((i, k) => ({ ...i, text: clip(tr.steps?.[k]?.say || i.text, 140) })) } catch { /* keep */ }
       }

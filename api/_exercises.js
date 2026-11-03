@@ -122,11 +122,11 @@ export default async function handler(req, res) {
 
   const secs = Array.isArray(ch.sections) ? ch.sections : []
   const secObj = sec ? secs.find(s => String(s.id) === sec) : null
-  const selectedSecs = secObj ? [secObj] : secs
+  const selectedSecs = secObj ? [secObj, ...secs.filter(s => String(s.id).startsWith(String(secObj.id) + '.'))] : secs
 
   let excerpt = ''
   if (secObj) {
-    excerpt += `Section ${secObj.id}: ${secObj.title}\n${secObj.text || ''}\n`
+    excerpt += selectedSecs.map(s => `Section ${s.id}: ${s.title}\n${s.text || ''}`).join('\n\n') + '\n'
     if (secObj.activities?.length) {
       excerpt += '\nActivities in this section:\n' + secObj.activities.map(a => `${a.title || 'Activity'}:\n${a.text || ''}`).join('\n\n')
     }

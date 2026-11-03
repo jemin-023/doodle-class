@@ -66,7 +66,8 @@ export function stripGreeting(say, isFirst) {
   if (isFirst || !say || typeof say !== 'string') return say
   let s = say.trim()
   for (let i = 0; i < 3; i++) {
-    const next = s.replace(LEADING_GREETING_RE, '').trim()
+    // also drop combining marks / punctuation left behind (e.g. the anusvara of 'बच्चों'), never leave half a word
+    const next = s.replace(LEADING_GREETING_RE, '').replace(/^[\p{M}\s,!।.:;—-]+/u, '').trim()
     if (!next || next === s) break
     s = next
   }

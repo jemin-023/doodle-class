@@ -81,7 +81,7 @@ export default async function handler(req, res) {
 
   const secs = Array.isArray(ch.sections) ? ch.sections : []
   const secObj = sec ? secs.find(s => String(s.id) === sec) : null
-  const selectedSecs = secObj ? [secObj] : secs
+  const selectedSecs = secObj ? [secObj, ...secs.filter(s => String(s.id).startsWith(String(secObj.id) + '.'))] : secs
 
   let excerpt = selectedSecs.map(s => `Section ${s.id}: ${s.title}\n${s.text || ''}`).join('\n\n')
   if (excerpt.length > 15000) excerpt = excerpt.slice(0, 15000)
