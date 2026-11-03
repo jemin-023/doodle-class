@@ -8,6 +8,7 @@ import { getHistory, getTotalStars } from '../lib/progress'
 import { getProfile } from '../lib/profile'
 import CoachCard from '../components/Coach/CoachCard'
 import './pages.css'
+import { DoodleScatter } from '../components/Doodles/Doodles'
 
 const SUGGESTIONS: Record<string, string[]> = {
   tara: ['Fractions', 'Times tables', 'Shapes'],
@@ -51,6 +52,7 @@ export default function Home() {
 
   return (
     <div className="pg-page">
+      <DoodleScatter variant="home" />
       <TopBar>
         <span className="pg-stars"><Icon name="star" size={20} /> {stars} {stars === 1 ? 'star' : 'stars'}</span>
       </TopBar>

@@ -11,6 +11,7 @@ import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
 import { SketchButton, SketchCard, Scribble, Icon, ProgressDots, TopBar } from '../components/ui'
 import '../components/Quiz/quiz.css'
+import { DoodleScatter } from '../components/Doodles/Doodles'
 
 const LETTERS = ['A', 'B', 'C', 'D']
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
@@ -230,6 +231,7 @@ export default function QuizPage() {
 
   return (
     <div className="qz-page">
+      <DoodleScatter variant="page" />
       <TopBar>
         <button type="button" className="qz-mute" onClick={toggleMute} aria-label={muted ? 'Unmute voice' : 'Mute voice'}>
           <Icon name={muted ? 'mute' : 'speaker'} size={24} />

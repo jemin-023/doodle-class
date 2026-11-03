@@ -1,0 +1,10 @@
+.dd-scatter { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.dd-spot { position: absolute; opacity: 0.9; animation: dd-float 8s ease-in-out infinite; }
+.dd-spot svg { display: block; }
+.dd-root { position: relative; overflow-x: hidden; }
+@keyframes dd-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@media (max-width: 720px) {
+  .dd-spot:not(.dd-keep) { display: none; }
+  .dd-spot svg { width: 36px; height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) { .dd-spot { animation: none; } }

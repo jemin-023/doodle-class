@@ -11,6 +11,7 @@ import { speak, stopSpeaking, setMuted, isMuted, prefetchSpeech } from '../lib/t
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
 import './pages.css'
+import { DoodleScatter } from '../components/Doodles/Doodles'
 
 const ACK = 'Good question! Let me show you.'
 
@@ -166,6 +167,7 @@ export default function Learn() {
 
   return (
     <div className="pg-page">
+      <DoodleScatter variant="page" />
       <TopBar>
         <SketchButton variant="ghost" onClick={() => nav('/')}><Icon name="home" size={18} /> Home</SketchButton>
       </TopBar>

@@ -5,6 +5,7 @@ import { CharacterAvatar } from '../components/Characters/Character'
 import { CHARACTERS, LANGUAGES } from '../characters/registry'
 import type { LanguageCode } from '../types'
 import './pages.css'
+import { DoodleScatter } from '../components/Doodles/Doodles'
 
 const SUGGESTIONS: Record<string, string[]> = {
   tara: ['Fractions', 'Multiplication tables', 'Geometry shapes', 'Percentages'],
@@ -32,6 +33,7 @@ export default function QuickQuiz() {
 
   return (
     <div className="pg-page">
+      <DoodleScatter variant="page" />
       <TopBar />
       <main className="pg-wrap">
         <div className="pg-head">

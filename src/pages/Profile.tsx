@@ -10,6 +10,7 @@ import { getProfile, saveProfile, type Profile as P } from '../lib/profile'
 import type { LanguageCode } from '../types'
 import './pages.css'
 import './profile.css'
+import { DoodleScatter } from '../components/Doodles/Doodles'
 
 function anyBoss(): boolean {
   try { return CHARACTERS.some(c => getBook(c.id).chapters.some((_, i) => isBossDefeated(c.id, i))) } catch { return false }
@@ -40,6 +41,7 @@ export default function Profile() {
 
   return (
     <div className="pg-page">
+      <DoodleScatter variant="page" />
       <TopBar />
       <main className="pg-wrap pg-sheet">
         <header className="pg-head"><h1>{p.name.trim() ? `Hi ${p.name.trim()}!` : 'My profile'}</h1></header>

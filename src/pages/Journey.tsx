@@ -6,6 +6,7 @@ import { CharacterAvatar } from '../components/Characters/Character'
 import { BossArt, XPBadge } from '../components/Game/Game'
 import '../components/Game/game.css'
 import '../pages/pages.css'
+import { DoodleScatter } from '../components/Doodles/Doodles'
 
 const PTS = [[70, 120], [190, 60], [310, 125], [420, 70]]
 const PATH = 'M70 120 C110 60, 150 40, 190 60 S270 130, 310 125 S380 60, 420 70 S500 110, 520 100'
@@ -28,6 +29,7 @@ export default function Journey() {
 
   return (
     <div>
+      <DoodleScatter variant="page" />
       <TopBar><XPBadge /></TopBar>
       <main className="gm-page">
         <h1 className="gm-h1" style={{ color: ch.color }}>{ch.name}'s Book</h1>
