@@ -1,0 +1,592 @@
+/* Doodle Class - Speaking & Dictation Practice (Sketchbook Theme) */
+
+.sp-page {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+.sp-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+/* Header & Back home */
+.sp-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.sp-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.sp-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 8px 16px;
+  min-height: 44px;
+  border: 2px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  background: var(--paper);
+  transition: transform .12s ease, background-color .12s ease;
+}
+
+.sp-back-home:hover {
+  transform: rotate(-1.5deg) translateY(-2px);
+  background: var(--highlight);
+  color: var(--ink);
+}
+
+.sp-title {
+  font-family: var(--font-hand);
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0;
+  color: var(--ink);
+}
+
+.sp-sub {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* Tabs switcher */
+.sp-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0 24px;
+  border-bottom: 2px dashed var(--rule);
+  padding-bottom: 16px;
+  overflow-x: auto;
+}
+
+.sp-tab-btn {
+  font-family: var(--font-hand);
+  font-size: 1.55rem;
+  font-weight: 700;
+  padding: 8px 22px;
+  min-height: 48px;
+  border: 2px solid var(--ink);
+  border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: transform .12s ease, background-color .12s ease;
+}
+
+.sp-tab-btn:hover {
+  transform: rotate(-1deg) translateY(-2px);
+}
+
+.sp-tab-btn.is-active {
+  background: var(--highlight);
+  box-shadow: 2px 3px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+/* Config row: Language & Teacher */
+.sp-config-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: var(--board);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.sp-config-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-config-label {
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 100px;
+}
+
+.sp-chips-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Practice Card Container */
+.sp-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 12px 6px;
+}
+
+/* Progress bar inside card */
+.sp-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.sp-progress-label {
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  color: var(--ink-soft);
+}
+
+/* Pronunciation word presentation */
+.sp-word-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 16px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.sp-target-word {
+  font-family: var(--font-hand);
+  font-size: clamp(2.8rem, 8vw, 4.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.sp-word-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Teacher Avatar Display with speech badge */
+.sp-teacher-spot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--paper-2);
+  border: 1.5px dashed var(--ink);
+}
+
+.sp-teacher-saying {
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+
+/* Recording / Mic button */
+.sp-listen-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sp-mic-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 170px;
+  min-height: 52px;
+  padding: 12px 28px;
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--marker-blue);
+  border: 2px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  position: relative;
+}
+
+.sp-mic-btn:hover:not(:disabled) {
+  transform: rotate(-1.5deg) translateY(-2px);
+  box-shadow: 3px 4px 0 var(--ink);
+}
+
+.sp-mic-btn.is-recording {
+  background: var(--marker-red);
+  animation: sp-pulse 1.3s infinite ease-out;
+}
+
+@keyframes sp-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(217, 71, 43, 0.5); }
+  70% { box-shadow: 0 0 0 16px rgba(217, 71, 43, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(217, 71, 43, 0); }
+}
+
+.sp-listen-status {
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* Pronunciation evaluation box */
+.sp-eval-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 6px;
+  border: 2px dashed var(--ink);
+  background: var(--board);
+  text-align: center;
+}
+
+.sp-stars-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sp-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  opacity: 0.35;
+  transition: transform .15s ease, color .15s ease;
+}
+
+.sp-star.is-earned {
+  color: var(--marker-yellow);
+  fill: var(--marker-yellow);
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.sp-transcript-quote {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  max-width: 440px;
+}
+
+.sp-feedback-msg {
+  font-family: var(--font-hand);
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.sp-nav-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+/* Dictation Sentence Display */
+.sp-sentence-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+
+.sp-sentence-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sp-sentence-label {
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Mode Switcher: Pen vs Typing */
+.sp-mode-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+
+.sp-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  min-height: 40px;
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color .12s ease;
+}
+
+.sp-mode-btn.is-active {
+  background: var(--highlight);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+/* Pen Canvas */
+.sp-canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sp-canvas-board {
+  position: relative;
+  width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fffdf6;
+  box-shadow: var(--shadow);
+  touch-action: none;
+  overflow: hidden;
+}
+
+.sp-canvas {
+  display: block;
+  width: 100%;
+  height: 240px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.sp-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sp-canvas-tools-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Typing Input container */
+.sp-typing-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--board);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+
+.sp-typing-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Dictation Evaluation & Word-by-Word diff */
+.sp-dict-eval {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--board);
+}
+
+.sp-eval-title {
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.sp-words-diff-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.sp-word-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  min-height: 44px;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sp-word-pill.is-correct {
+  background: #eaf5ec;
+  border: 2px solid var(--marker-green);
+  color: var(--marker-green);
+}
+
+.sp-word-pill.is-wrong {
+  background: #fdf0ed;
+  border: 2px solid var(--marker-red);
+  color: var(--marker-red);
+}
+
+.sp-diff-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-user-wrote {
+  text-decoration: line-through;
+  opacity: 0.8;
+  color: var(--ink-soft);
+}
+
+.sp-arrow {
+  color: var(--ink-faint);
+  font-weight: normal;
+}
+
+.sp-target-correct {
+  color: var(--marker-red);
+  font-weight: 700;
+}
+
+.sp-eval-summary {
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 4px;
+}
+
+.sp-eval-note {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.sp-error-text {
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  color: var(--marker-red);
+  margin: 6px 0 0;
+}
+
+/* Completion state */
+.sp-completed-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.sp-completed-title {
+  font-family: var(--font-hand);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.sp-completed-msg {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  max-width: 480px;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .sp-wrap {
+    padding: 16px 12px 48px;
+  }
+  .sp-config-label {
+    min-width: 100%;
+  }
+  .sp-nav-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sp-nav-buttons button {
+    width: 100%;
+  }
+  .sp-canvas-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sp-canvas-tools-left {
+    justify-content: space-between;
+  }
+  .sp-canvas-toolbar button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-mic-btn.is-recording {
+    animation: none;
+  }
+  .sp-tab-btn, .sp-back-home, .sp-mic-btn, .sp-mode-btn {
+    transition: none;
+  }
+}
