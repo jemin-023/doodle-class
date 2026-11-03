@@ -469,7 +469,7 @@ export default function SharedNotebook() {
                           >
                             {src.title}
                           </span>
-                          <Chip style={{ fontSize: '0.75rem', padding: '2px 8px', minHeight: '26px' }}>
+                          <Chip>
                             {src.kind.toUpperCase()}
                           </Chip>
                         </div>
@@ -673,7 +673,7 @@ export default function SharedNotebook() {
                       marginBottom: 8,
                     }}
                   >
-                    <Chip style={{ fontSize: '0.75rem', padding: '2px 8px', minHeight: '26px' }}>
+                    <Chip>
                       {out.tool}
                     </Chip>
                     <span style={{ fontSize: '0.8rem', color: 'var(--ink-faint)' }}>
