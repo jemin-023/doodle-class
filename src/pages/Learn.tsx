@@ -5,12 +5,14 @@ import type { Lesson, LanguageCode, Mood, OutlineItem, DeepMeta, LessonStep } fr
 import Whiteboard from '../components/Whiteboard/Whiteboard'
 import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
-import { SketchButton, Icon, ProgressDots, TopBar, TextInput } from '../components/ui'
+import { SketchButton, Icon, ProgressDots, TopBar, TextInput, Chip } from '../components/ui'
 import { streamLesson, askTeacher, generateQuiz } from '../lib/api'
 import { speak, stopSpeaking, setMuted, isMuted, prefetchSpeech } from '../lib/tts'
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
+import { saveResume, clearResume, setSectionProgress } from '../lib/resume'
 import './pages.css'
+import './learn-extra.css'
 import { DoodleScatter } from '../components/Doodles/Doodles'
 import TeachBack from '../components/TeachBack/TeachBack'
 import LangSwitch from '../components/LangSwitch/LangSwitch'
@@ -48,13 +50,48 @@ export default function Learn() {
 
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [error, setError] = useState(false)
-  const [step, setStep] = useState(0)
+  // B1: On load, if URL has step=N, start from that step
+  const urlStep = sp.get('step')
+  const initialStep = urlStep !== null ? Math.max(0, parseInt(urlStep, 10) || 0) : 0
+  const [step, setStep] = useState(initialStep)
   const [started, setStarted] = useState(false)
   const [playing, setPlaying] = useState(true)
   const [finished, setFinished] = useState(false)
   const [mood, setMood] = useState<Mood>('idle')
   const [muted, setMutedState] = useState(isMuted())
   const [nonce, setNonce] = useState(0)
+
+  // B6: Speed control chips (0.75x, 1x, 1.25x), stored in localStorage doodle-speed
+  const [speed, setSpeedState] = useState<number>(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('doodle-speed') || '1')
+      return v === 0.75 || v === 1.25 ? v : 1
+    } catch {
+      return 1
+    }
+  })
+  const setSpeed = (s: number | ((prev: number) => number)) => {
+    setSpeedState(prev => {
+      const next = typeof s === 'function' ? s(prev) : s
+      try { localStorage.setItem('doodle-speed', String(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  // D1: Voice control
+  const [voiceControl, setVoiceControl] = useState(false)
+  const [voiceListening, setVoiceListening] = useState(false)
+  const voiceControlRef = useRef(false)
+  voiceControlRef.current = voiceControl
+  const playingRef = useRef(playing)
+  playingRef.current = playing
+  const stepRef = useRef(step)
+  stepRef.current = step
+  const finishedRef = useRef(finished)
+  finishedRef.current = finished
+
+  // D2: Read-along estimated progress (0..1)
+  const [readProgress, setReadProgress] = useState<number | undefined>(undefined)
 
   const runId = useRef(0)
   const writtenRef = useRef(-1)
@@ -119,6 +156,195 @@ export default function Learn() {
   lessonRef.current = lesson
   const curSay = steps[step]?.say
 
+  // B1: If started from step=N, mark covered outline items up to initialStep
+  useEffect(() => {
+    if (initialStep > 0 && steps.length > 0) {
+      const prevCovers: number[] = []
+      for (let i = 0; i < Math.min(initialStep, steps.length); i++) {
+        if (steps[i].covers) prevCovers.push(...steps[i].covers!)
+      }
+      if (prevCovers.length > 0) {
+        setCovered(c => {
+          const n = new Set(c)
+          prevCovers.forEach(x => n.add(x))
+          return n
+        })
+      }
+    }
+  }, [steps, initialStep])
+
+  // B1: Clear resume when any lesson finishes; setSectionProgress when deep lesson finishes
+  useEffect(() => {
+    if (finished) {
+      clearResume()
+      if (ncert) setSectionProgress(ncert.file, ncert.sec, 'done')
+    }
+  }, [finished, ncert])
+
+  // B1: Save resume point whenever step changes
+  useEffect(() => {
+    if (finished || steps.length === 0) return
+    saveResume({
+      url: loc.pathname + loc.search,
+      title: lesson?.topic || topic,
+      step,
+      total: steps.length,
+      at: Date.now(),
+      ...(ncert ? { ncert: { file: ncert.file, ...(ncert.sec ? { sec: ncert.sec } : {}) } } : {}),
+    })
+  }, [step, steps.length, finished, loc.pathname, loc.search, lesson?.topic, topic, ncert])
+
+  useEffect(() => {
+    if (!streaming && steps.length > 0 && step >= steps.length) {
+      setStep(Math.max(0, steps.length - 1))
+    }
+  }, [streaming, steps.length, step])
+
+  // D2 read-along: estimated progress based on elapsed time / (text length * 55 ms * speed)
+  useEffect(() => {
+    if (!started || !playing || finished || !curSay || mood !== 'talking') {
+      if (finished) setReadProgress(1)
+      else if (!started) setReadProgress(undefined)
+      return
+    }
+    const textLen = curSay.length
+    const totalMs = Math.max(500, textLen * 55 * speed)
+    const startAt = Date.now()
+    setReadProgress(0)
+
+    let rafId = 0
+    const tick = () => {
+      const elapsed = Date.now() - startAt
+      const p = Math.min(1, Math.max(0, elapsed / totalMs))
+      setReadProgress(p)
+      if (p < 1) {
+        rafId = requestAnimationFrame(tick)
+      }
+    }
+    rafId = requestAnimationFrame(tick)
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }, [started, playing, finished, curSay, step, nonce, mood, speed])
+
+  const onWritten = useCallback((s: number) => {
+    writtenRef.current = s
+    checkRef.current?.()
+  }, [])
+
+  const go = (n: number) => {
+    stopListening()
+    setVoiceListening(false)
+    if (Math.max(0, Math.min(last, n)) !== step) writtenRef.current = -1
+    setFinished(false)
+    setStep(Math.max(0, Math.min(last, n)))
+  }
+  const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m) }
+  const begin = () => { setStarted(true); setPlaying(true) }
+
+  // B6: Skip to first example outline item
+  const exampleIds = new Set(outline.filter(o => o.kind === 'example').map(o => o.id))
+  const exampleStepIndex = steps.findIndex(s => s.covers?.some(id => exampleIds.has(id)))
+  const skipToExamples = () => {
+    if (exampleStepIndex < 0) return
+    stopSpeaking()
+    stopListening()
+    setVoiceListening(false)
+    writtenRef.current = -1
+    setFinished(false)
+    setStep(exampleStepIndex)
+    setStarted(true)
+    setPlaying(true)
+    setNonce(n => n + 1)
+  }
+
+  // D1: Voice control runner between steps
+  const runVoiceControl = async (atStep: number, myRunId: number) => {
+    while (
+      voiceControlRef.current &&
+      playingRef.current &&
+      !finishedRef.current &&
+      stepRef.current === atStep &&
+      runId.current === myRunId
+    ) {
+      setVoiceListening(true)
+      let transcript = ''
+      try {
+        transcript = await listen({ mode: 'codemix', language: 'unknown' })
+      } catch {
+        /* ignore */
+      }
+      setVoiceListening(false)
+
+      if (
+        !voiceControlRef.current ||
+        !playingRef.current ||
+        finishedRef.current ||
+        stepRef.current !== atStep ||
+        runId.current !== myRunId
+      ) {
+        break
+      }
+
+      const t = transcript.toLowerCase().trim()
+      if (!t) {
+        await new Promise(r => setTimeout(r, 200))
+        continue
+      }
+
+      if (/\b(next|aage|forward)\b|आगे|اگے/i.test(t)) {
+        if (atStep < stepsRef.current.length - 1) {
+          go(atStep + 1)
+        } else if (streamingRef.current) {
+          setWaiting(true)
+        } else {
+          setFinished(true)
+          setMood('happy')
+        }
+        break
+      }
+
+      if (/\b(repeat|replay|again)\b|phir\s*se|dobara|fir\s*se|फिर\s*से|दोबारा/i.test(t)) {
+        writtenRef.current = -1
+        setNonce(n => n + 1)
+        break
+      }
+
+      if (/\b(slower|slow)\b|dheere|dhire|धीरे/i.test(t)) {
+        setSpeed(s => (s > 1 ? 1 : 0.75))
+        writtenRef.current = -1
+        setNonce(n => n + 1)
+        break
+      }
+
+      if (/\b(stop|pause|halt)\b|ruko|ruk\b|रुको|बस/i.test(t)) {
+        setPlaying(false)
+        stopSpeaking()
+        break
+      }
+
+      if (/\bexplain(\s*again)?\b|samjhao|samjha|समझाइए|समझो|\bdoubt\b/i.test(t)) {
+        setPlaying(false)
+        stopSpeaking()
+        const currentSay = stepsRef.current[atStep]?.say || ''
+        setQuestion(currentSay ? `Can you explain: "${currentSay}"?` : 'Can you explain this again?')
+        setAskOpen(true)
+        break
+      }
+    }
+  }
+
+  const toggleVoiceControl = () => {
+    const next = !voiceControl
+    setVoiceControl(next)
+    if (!next) {
+      stopListening()
+      setVoiceListening(false)
+    } else if (started && playing && !finished && writtenRef.current === step) {
+      runVoiceControl(step, runId.current)
+    }
+  }
+
   useEffect(() => {
     if (!started || !playing || finished || curSay === undefined) { setMood(finished ? 'happy' : 'idle'); return }
     const id = ++runId.current
@@ -135,6 +361,12 @@ export default function Learn() {
       const cv = stepsRef.current[step]?.covers
       if (cv?.length) setCovered(c => { const n = new Set(c); cv.forEach(x => n.add(x)); return n })
       setMood('idle')
+
+      if (voiceControlRef.current && sttSupported()) {
+        runVoiceControl(step, id)
+        return
+      }
+
       timer = setTimeout(() => {
         if (id !== runId.current) return
         if (step < stepsRef.current.length - 1) setStep(step + 1)
@@ -154,6 +386,8 @@ export default function Learn() {
       if (timer) clearTimeout(timer)
       checkRef.current = null
       stopSpeaking()
+      stopListening()
+      setVoiceListening(false)
     }
   }, [started, playing, finished, step, nonce, curSay, ch.speaker, lang])
 
@@ -166,6 +400,8 @@ export default function Learn() {
   /** Ask the teacher and insert the answer right after the current step. Returns true on success. */
   const runAsk = async (q: string, focus?: string[], boardQ?: string): Promise<boolean> => {
     if (!q || asking || !lesson) return false
+    stopListening()
+    setVoiceListening(false)
     setAsking(true); setPlaying(false); stopSpeaking(); setMood('thinking'); setWaiting(false)
     if (lang === 'en-IN') void speak(ACK, { speaker: ch.speaker, language: lang }).catch(() => {})
     let ok = false
@@ -193,6 +429,8 @@ export default function Learn() {
     if (!started || finished || asking) return
     if (!inkCard) inkWasPlaying.current = playing
     setPlaying(false); stopSpeaking()
+    stopListening()
+    setVoiceListening(false)
     setInkCard({ hit })
   }
   const closeInk = () => {
@@ -218,6 +456,8 @@ export default function Learn() {
   /** Insert a step right after the current one and play it (used by doubts and teach-back corrections). */
   const insertStep = (ns: LessonStep) => {
     stopSpeaking()
+    stopListening()
+    setVoiceListening(false)
     const at = step + 1
     setLesson(l => l && { ...l, steps: [...l.steps.slice(0, at), ns, ...l.steps.slice(at)] })
     setStep(at); setFinished(false); setStarted(true); setPlaying(true)
@@ -225,31 +465,21 @@ export default function Learn() {
   /** Swap in a translated lesson (same steps, new language) and replay the current step. */
   const switchLanguage = (translated: Lesson, code: LanguageCode) => {
     stopSpeaking()
+    stopListening()
+    setVoiceListening(false)
     setLangOverride(code)
     setLesson(translated)
     writtenRef.current = -1
     setNonce(n => n + 1)
   }
 
-  const onWritten = useCallback((s: number) => {
-    writtenRef.current = s
-    checkRef.current?.()
-  }, [])
-
-  const go = (n: number) => {
-    if (Math.max(0, Math.min(last, n)) !== step) writtenRef.current = -1
-    setFinished(false)
-    setStep(Math.max(0, Math.min(last, n)))
-  }
-  const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m) }
-  const begin = () => { setStarted(true); setPlaying(true) }
   const toQuiz = () =>
     nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${boardLang ?? lang}&grade=${grade}${ncert ? `&ncert=${ncert.file}${ncert.sec ? `&sec=${encodeURIComponent(ncert.sec)}` : ''}` : ''}`, { state: { lesson, source } })
 
   const jumpTo = (id: number) => {
     const at = steps.findIndex(s => s.covers?.includes(id))
     if (at < 0) return
-    stopSpeaking(); writtenRef.current = -1; setFinished(false); setStep(at); setStarted(true); setPlaying(true); setNonce(n => n + 1)
+    stopSpeaking(); stopListening(); setVoiceListening(false); writtenRef.current = -1; setFinished(false); setStep(at); setStarted(true); setPlaying(true); setNonce(n => n + 1)
   }
   const src = dmeta?.source
   const srcLine = src ? ['From your NCERT book', `Class ${src.grade} ${src.subject}`, src.chapter, src.section].filter(Boolean).join(' · ') : ''
@@ -312,25 +542,64 @@ export default function Learn() {
               </div>
             )}
             {steps.length > 0 && started && (
-              <Whiteboard steps={steps} currentStep={step} accent={ch.color} onStepWritten={onWritten} />
+              <Whiteboard steps={steps} currentStep={step} accent={ch.color} onStepWritten={onWritten} speed={speed} />
             )}
             {steps.length > 0 && started && <InkLayer host={inkHost} onCircle={onCircle} marked={inkCard?.hit ?? null} />}
           </div>
           <aside className="pg-side">
-            <Character id={characterId} mood={shownMood} size={200} />
-            <SpeechBubble text={say} side="left" typing={thinking} />
+            <div className={`ln-char-wrap ${Boolean(ncert && finished) ? 'ln-dance' : ''}`}>
+              <Character id={characterId} mood={shownMood} size={200} />
+            </div>
+            <SpeechBubble text={say} side="left" typing={thinking} progress={finished || error ? undefined : readProgress} />
             {steps.length > 0 && (
               <>
                 <div className="pg-controls">
                   <button className="pg-ib" aria-label="Previous step" onClick={() => go(step - 1)}><Icon name="back" size={22} /></button>
                   <button className="pg-ib" aria-label={playing && started ? 'Pause' : 'Play'}
-                    onClick={() => { if (!started) begin(); else if (playing) { setPlaying(false); stopSpeaking() } else setPlaying(true) }}>
+                    onClick={() => {
+                      if (!started) begin()
+                      else if (playing) {
+                        setPlaying(false)
+                        stopSpeaking()
+                        stopListening()
+                        setVoiceListening(false)
+                      } else {
+                        setPlaying(true)
+                      }
+                    }}>
                     <Icon name={playing && started ? 'pause' : 'play'} size={22} />
                   </button>
                   <button className="pg-ib" aria-label="Next step" onClick={() => go(step + 1)}><Icon name="next" size={22} /></button>
-                  <button className="pg-ib" aria-label="Replay step" onClick={() => { setFinished(false); setPlaying(true); setNonce(n => n + 1) }}><Icon name="replay" size={22} /></button>
+                  <button className="pg-ib" aria-label="Replay step" onClick={() => { stopListening(); setVoiceListening(false); setFinished(false); setPlaying(true); setNonce(n => n + 1) }}><Icon name="replay" size={22} /></button>
                   <button className="pg-ib" aria-label={muted ? 'Unmute' : 'Mute'} onClick={toggleMute}><Icon name={muted ? 'mute' : 'speaker'} size={22} /></button>
                 </div>
+                <div className="ln-speed-row" role="group" aria-label="Playback speed">
+                  <span className="ln-speed-label">Speed</span>
+                  <div className="ln-speed-chips">
+                    {([0.75, 1, 1.25] as const).map(s => (
+                      <Chip key={s} selected={speed === s} onClick={() => setSpeed(s)}>{s}×</Chip>
+                    ))}
+                  </div>
+                </div>
+                {sttSupported() && (
+                  <div className="ln-voice-row">
+                    <Chip selected={voiceControl} onClick={toggleVoiceControl}>
+                      Voice control {voiceControl ? 'ON' : 'OFF'}
+                    </Chip>
+                    {voiceListening && (
+                      <span className="ln-voice-indicator" role="status" aria-live="polite">
+                        <span className="ln-voice-dot" /> Listening…
+                      </span>
+                    )}
+                  </div>
+                )}
+                {Boolean(ncert && exampleStepIndex >= 0 && step < exampleStepIndex && !finished) && (
+                  <div className="ln-skip-examples">
+                    <SketchButton variant="ghost" onClick={skipToExamples}>
+                      <Icon name="next" size={16} /> Skip to examples
+                    </SketchButton>
+                  </div>
+                )}
                 <div className="pg-extras">
                   {lesson && <LangSwitch lesson={lesson} current={lang} disabled={streaming} onSwitch={switchLanguage} {...boardOpt} />}
                   <ShareButton topic={lesson?.topic || topic} characterId={characterId} language={urlLang} grade={grade} />
@@ -357,15 +626,38 @@ export default function Learn() {
                   </div>
                 )}
                 {finished && (
-                  <div className="lc-burst" aria-hidden="true">
-                    <style>{`.lc-burst{position:relative;height:0;overflow:visible;pointer-events:none}
+                  ncert ? (
+                    <div className="lc-burst-deep" aria-hidden="true">
+                      {Array.from({ length: 16 }, (_, i) => {
+                        const rad = i * (Math.PI / 8)
+                        const dist = i % 2 === 0 ? 190 : 140
+                        return (
+                          <i
+                            key={i}
+                            style={{
+                              '--dx': `${Math.round(Math.cos(rad) * dist)}px`,
+                              '--dy': `${Math.round(Math.sin(rad) * (dist * 0.8) - 40)}px`,
+                              '--r': `${i % 2 ? 260 : -260}deg`,
+                              color: ['#ffc83d', '#ff7a59', '#4cc38a', '#4d8dff', '#f0c93a'][i % 5],
+                              animationDelay: `${i * 30}ms`,
+                            } as React.CSSProperties}
+                          >
+                            ★
+                          </i>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="lc-burst" aria-hidden="true">
+                      <style>{`.lc-burst{position:relative;height:0;overflow:visible;pointer-events:none}
 .lc-burst i{position:absolute;left:50%;top:0;font-style:normal;font-size:26px;opacity:0;animation:lc-pop 1.4s ease-out forwards}
 @keyframes lc-pop{0%{opacity:1;transform:translate(0,0) scale(.3) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2) rotate(var(--r))}}
 @media (prefers-reduced-motion:reduce){.lc-burst i{animation:none}}`}</style>
-                    {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
-                      <i key={i} style={{ '--dx': `${Math.round(Math.cos(i * Math.PI / 4) * 110)}px`, '--dy': `${Math.round(Math.sin(i * Math.PI / 4) * 90 - 30)}px`, '--r': `${i % 2 ? 200 : -200}deg`, color: ['#ffc83d', '#ff7a59', '#4cc38a', '#4d8dff'][i % 4], animationDelay: `${i * 40}ms` } as React.CSSProperties}>★</i>
-                    ))}
-                  </div>
+                      {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                        <i key={i} style={{ '--dx': `${Math.round(Math.cos(i * Math.PI / 4) * 110)}px`, '--dy': `${Math.round(Math.sin(i * Math.PI / 4) * 90 - 30)}px`, '--r': `${i % 2 ? 200 : -200}deg`, color: ['#ffc83d', '#ff7a59', '#4cc38a', '#4d8dff'][i % 4], animationDelay: `${i * 40}ms` } as React.CSSProperties}>★</i>
+                      ))}
+                    </div>
+                  )
                 )}
                 {finished && lesson && <TeachBack lesson={lesson} characterId={characterId} language={lang} grade={grade} onCorrection={insertStep} {...boardOpt} />}
                 {finished && <SketchButton onClick={toQuiz}>Test yourself →</SketchButton>}

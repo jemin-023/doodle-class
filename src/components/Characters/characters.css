@@ -35,3 +35,12 @@
 @media (prefers-reduced-motion: reduce) {
   .ch *, .ch, .sb-text, .sb-dots i { animation: none !important; }
 }
+
+/* D2 read-along: marker-yellow underline */
+.sb-word-hl {
+  text-decoration: underline;
+  text-decoration-color: var(--marker-yellow, #f0c93a);
+  text-decoration-thickness: 3.5px;
+  text-underline-offset: 3px;
+}
+

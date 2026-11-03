@@ -1,0 +1,129 @@
+/* B6: Speed control chips */
+.ln-speed-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.ln-speed-label {
+  font-family: var(--font-hand, 'Caveat', cursive);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink-soft, #5d5850);
+}
+
+.ln-speed-chips {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ln-skip-examples {
+  margin-top: 6px;
+  width: 100%;
+}
+
+/* D1: Voice control toggle and listening indicator */
+.ln-voice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.ln-voice-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  background: var(--paper-2, #f3eee2);
+  border: 1.5px solid var(--ink, #23211e);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-family: var(--font-hand, 'Caveat', cursive);
+  color: var(--ink, #23211e);
+}
+
+.ln-voice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--marker-red, #d9472b);
+  animation: ln-voice-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ln-voice-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-voice-dot {
+    animation: none !important;
+  }
+}
+
+/* F5: Deep lesson finished - teacher happy dance */
+.ln-char-wrap {
+  display: inline-block;
+  transform-origin: 50% 100%;
+}
+
+.ln-char-wrap.ln-dance {
+  animation: ln-happy-dance 0.65s ease-in-out infinite;
+}
+
+@keyframes ln-happy-dance {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  35% { transform: translateY(-16px) rotate(3deg) scale(1.06); }
+  65% { transform: translateY(-6px) rotate(-1deg) scale(1.02); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-char-wrap.ln-dance {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* F5: Bigger star burst for deep lessons */
+.lc-burst-deep {
+  position: relative;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lc-burst-deep i {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  font-style: normal;
+  font-size: 34px;
+  opacity: 0;
+  animation: lc-pop-deep 1.8s ease-out forwards;
+}
+
+@keyframes lc-pop-deep {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.3) rotate(0deg);
+  }
+  60% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1.4) rotate(var(--r));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-burst-deep i {
+    animation: none !important;
+  }
+}

@@ -11,9 +11,19 @@ export function plainSay(t: string): string {
     .replace(/\\[a-zA-Z]+/g, '').replace(/[{}$]/g, '').replace(/\s+/g, ' ').trim()
 }
 
-export interface SpeechBubbleProps { text: string; side?: 'left' | 'right'; typing?: boolean }
+export interface SpeechBubbleProps {
+  text: string
+  side?: 'left' | 'right'
+  typing?: boolean
+  progress?: number
+}
 
-export default function SpeechBubble({ text, side = 'left', typing = false }: SpeechBubbleProps) {
+export default function SpeechBubble({ text, side = 'left', typing = false, progress }: SpeechBubbleProps) {
+  const plain = plainSay(text)
+  const words = plain.split(/\s+/).filter(Boolean)
+  const isReadAlong = typeof progress === 'number' && progress >= 0 && words.length > 0
+  const hlCount = isReadAlong ? Math.min(words.length, Math.floor(progress * words.length)) : 0
+
   return (
     <div className={`sb sb-${side}`} role="status" aria-live="polite">
       <svg className="sb-tail" viewBox="0 0 22 18" aria-hidden="true">
@@ -22,8 +32,16 @@ export default function SpeechBubble({ text, side = 'left', typing = false }: Sp
       </svg>
       {typing ? (
         <span className="sb-dots" aria-label="typing"><i /><i /><i /></span>
+      ) : isReadAlong ? (
+        <span className="sb-text" key={text}>
+          {words.map((w, i) => (
+            <span key={i} className={i < hlCount ? 'sb-word-hl' : undefined}>
+              {w}{i < words.length - 1 ? ' ' : ''}
+            </span>
+          ))}
+        </span>
       ) : (
-        <span className="sb-text" key={text}>{plainSay(text)}</span>
+        <span className="sb-text" key={text}>{plain}</span>
       )}
     </div>
   )
