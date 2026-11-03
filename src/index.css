@@ -1,0 +1,42 @@
+/* Design tokens — Doodle Class sketchbook theme. Owned by lead. Do not add gradients, glass, or purple. */
+:root {
+  --paper: #fbf8f1;
+  --paper-2: #f3eee2;
+  --rule: #dfe6ee;          /* faint ruled lines */
+  --margin: #f2b8b0;        /* red notebook margin line */
+  --ink: #23211e;           /* graphite / pen ink */
+  --ink-soft: #5d5850;
+  --ink-faint: #9a948a;
+  --board: #fffefa;         /* whiteboard surface */
+  --marker-blue: #2f5fd0;
+  --marker-red: #d9472b;
+  --marker-green: #2f8a4c;
+  --highlight: #ffe066;     /* highlighter yellow */
+  --tape: rgba(240, 222, 160, 0.75);
+  --ok: #2f8a4c;
+  --bad: #d9472b;
+  --font-hand: 'Caveat', 'Comic Sans MS', cursive;
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --radius: 4px;
+  --shadow: 2px 3px 0 rgba(35, 33, 30, 0.12);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--paper);
+  background-image: radial-gradient(var(--rule) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-hand); font-weight: 700; line-height: 1.1; margin: 0 0 .4em; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 2.2rem; }
+h3 { font-size: 1.6rem; }
+button { font: inherit; cursor: pointer; }
+a { color: var(--marker-blue); }
+::selection { background: var(--highlight); }
