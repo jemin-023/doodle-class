@@ -43,7 +43,7 @@ h3 { font-size: 1.6rem; }
 button { font: inherit; cursor: pointer; }
 a { color: var(--marker-blue); }
 a:hover { color: var(--marker-red); }
-:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--marker-blue); outline-offset: 3px; }
 img, svg { max-width: 100%; }
 body { overflow-x: hidden; }
 ::selection { background: var(--highlight); }
@@ -113,5 +113,17 @@ html.a11y-contrast {
   --ink-faint: #333333;
   --rule: #666666;
   --shadow: 3px 3px 0 #000000;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 

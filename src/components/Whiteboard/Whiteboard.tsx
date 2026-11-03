@@ -7,7 +7,7 @@ import {
   isReddish, parseRich, hash, useReducedMotion, eqToHtml, inlineMath,
 } from './shared'
 import { itemText } from '../Ink/describe'
-import { NumberLine, FractionVis, ChartVis, TableVis, DiagramVis } from './visuals'
+import { NumberLine, FractionVis, ChartVis, TableVis, DiagramVis, ReactionVis } from './visuals'
 
 export interface WhiteboardProps {
   steps: LessonStep[]
@@ -121,7 +121,7 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
   const lineColor = CYCLE[index % CYCLE.length]
   const drawColor = DRAW_CYCLE[hash(item.kind === 'drawing' ? item.shape + (item.label ?? '') : '') % DRAW_CYCLE.length]
   const underColor = isReddish(accent) ? M_BLUE : M_RED
-  const isVis = item.kind === 'numberline' || item.kind === 'fraction' || item.kind === 'chart' || item.kind === 'table' || item.kind === 'diagram'
+  const isVis = item.kind === 'numberline' || item.kind === 'fraction' || item.kind === 'chart' || item.kind === 'table' || item.kind === 'diagram' || item.kind === 'reaction'
   const seed = useMemo(() => hash(item.kind + '|' + text + (item.kind === 'drawing' ? item.shape + (item.label ?? '') : '') + (isVis ? JSON.stringify(item) : '')), [item, text, isVis])
   const isEq = item.kind === 'equation'
   const hasInline = !isEq && item.kind !== 'drawing' && !isVis && item.kind !== 'title' && /\$[^$]+\$/.test(rawText)
@@ -197,8 +197,8 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
   switch (item.kind) {
     case 'title':
       return (
-        <div className="wb-line wb-title" style={style}>
-          <span className="wb-title-text" style={{ color: accent }}>
+        <div className="wb-line wb-title" style={style} dir="auto">
+          <span className="wb-title-text" style={{ color: accent }} dir="auto">
             {out}
             <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 14 }}>
               {showDecor && <RoughSvg draw={drawUnderline(underColor, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
@@ -207,14 +207,14 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
         </div>
       )
     case 'text':
-      return <div className="wb-line wb-text" style={style}>{out}</div>
+      return <div className="wb-line wb-text" style={style} dir="auto">{out}</div>
     case 'bullet':
       return (
-        <div className="wb-line wb-bullet" style={{ ...style, color: lineColor }}>
+        <div className="wb-line wb-bullet" style={{ ...style, color: lineColor }} dir="auto">
           <span className="wb-dot">
             <RoughSvg animate={false} draw={(rc, w, h) => [rc.ellipse(w / 2, h / 2, w - 5, h - 5, { fill: lineColor, fillStyle: 'solid', stroke: lineColor, strokeWidth: 1.4, roughness: 1.6, seed })]} />
           </span>
-          <span className="wb-btext">{out}</span>
+          <span className="wb-btext" dir="auto">{out}</span>
         </div>
       )
     case 'equation':
@@ -227,8 +227,8 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
       )
     case 'highlight':
       return (
-        <div className="wb-line wb-highlight-wrap" style={style}>
-          <span className="wb-highlight">
+        <div className="wb-line wb-highlight-wrap" style={style} dir="auto">
+          <span className="wb-highlight" dir="auto">
             {showDecor && <RoughSvg draw={drawHighlightBox(M_ORANGE, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
             <span className="wb-hl-text">{out}</span>
           </span>
@@ -236,7 +236,7 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
       )
     case 'example':
       return (
-        <div className="wb-line wb-example" style={style}>
+        <div className="wb-line wb-example" style={style} dir="auto">
           <span className="wb-eg">e.g.</span>{out}
         </div>
       )
@@ -245,6 +245,7 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
     case 'chart': return <ChartVis item={item} animate={animate} speed={speed} seed={seed} style={style} onDone={finish} />
     case 'table': return <TableVis item={item} animate={animate} speed={speed} seed={seed} accent={accent} style={style} onDone={finish} />
     case 'diagram': return <DiagramVis item={item} animate={animate} speed={speed} seed={seed} style={style} onDone={finish} />
+    case 'reaction': return <ReactionVis item={item} animate={animate} speed={speed} seed={seed} style={style} onDone={finish} />
     case 'drawing': {
       const sz = SHAPE_SIZE[item.shape] ?? { w: 120, h: 80 }
       const flex = sz.w === undefined

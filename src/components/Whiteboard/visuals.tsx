@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import katex from 'katex'
+import rough from 'roughjs'
 import type { BoardItem } from '../../types'
 import { type RC, RoughSvg, INK, INK_FAINT, HIGHLIGHT, M_BLUE, M_RED, M_GREEN, M_ORANGE, inlineMath } from './shared'
 import { DIAGRAM_LIB, DW, DH, diagramKey, makeKit } from './diagrams'
@@ -49,7 +50,11 @@ interface VisFrameProps {
 
 function VisFrame({ style, isZoom, children, zoomContent }: VisFrameProps) {
   const [open, setOpen] = useState(false)
-  const close = useCallback(() => setOpen(false), [])
+  const openerRef = useRef<HTMLButtonElement>(null)
+  const close = useCallback(() => {
+    setOpen(false)
+    openerRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -62,6 +67,7 @@ function VisFrame({ style, isZoom, children, zoomContent }: VisFrameProps) {
     <div className="wb-line wb-vis" style={style}>
       {!isZoom && (
         <button
+          ref={openerRef}
           className="wb-zoom-btn"
           type="button"
           onClick={() => setOpen(true)}
@@ -184,7 +190,7 @@ export function NumberLine({ item, animate, speed, seed, style, onDone, isZoom }
   }
   return (
     <VisFrame style={style} isZoom={isZoom} zoomContent={<NumberLine item={item} animate={false} speed={speed} seed={seed} isZoom />}>
-      <div className="wb-nl" style={{ height: H }}><RoughSvg draw={draw} animate={animate} duration={1000 / speed} onDone={svgDone} /></div>
+      <div className="wb-nl" style={{ height: H }} role="img" aria-label={item.label ? String(item.label) : `Number line from ${from} to ${to}`}><RoughSvg draw={draw} animate={animate} duration={1000 / speed} onDone={svgDone} /></div>
       {item.label && <div className={'wb-vcap' + (drawn ? ' on' : '')}>{inlineMath(String(item.label))}</div>}
     </VisFrame>
   )
@@ -249,7 +255,7 @@ export function FractionVis({ item, animate, speed, seed, style, onDone, isZoom 
 
   return (
     <VisFrame style={style} isZoom={isZoom} zoomContent={<FractionVis item={item} animate={false} speed={speed} seed={seed} isZoom />}>
-      <div className="wb-frac" style={{ height: H }}><RoughSvg draw={draw} animate={animate} duration={900 / speed} onDone={svgDone} /></div>
+      <div className="wb-frac" style={{ height: H }} role="img" aria-label={`Fraction of ${num} over ${den}`}><RoughSvg draw={draw} animate={animate} duration={900 / speed} onDone={svgDone} /></div>
       <div className={'wb-vcap' + (drawn ? ' on' : '')}>{label}</div>
     </VisFrame>
   )
@@ -310,7 +316,7 @@ export function ChartVis({ item, animate, speed, seed, style, onDone, isZoom }: 
   return (
     <VisFrame style={style} isZoom={isZoom} zoomContent={<ChartVis item={item} animate={false} speed={speed} seed={seed} isZoom />}>
       {item.title && <div className="wb-vtitle">{inlineMath(String(item.title))}</div>}
-      <div className="wb-chart"><RoughSvg draw={draw} animate={animate} duration={1200 / speed} onDone={svgDone} /></div>
+      <div className="wb-chart" role="img" aria-label={item.title ? String(item.title) : (isLine ? 'Line chart' : 'Bar chart')}><RoughSvg draw={draw} animate={animate} duration={1200 / speed} onDone={svgDone} /></div>
     </VisFrame>
   )
 }
@@ -348,7 +354,7 @@ export function TableVis({ item, animate, speed, seed, accent, style, onDone, is
   if (!nr) return null
   return (
     <VisFrame style={style} isZoom={isZoom} zoomContent={<TableVis item={item} animate={false} speed={speed} seed={seed} accent={accent} isZoom />}>
-      <div className="wb-tbl" style={{ gridTemplateColumns: `repeat(${nc}, minmax(0, 1fr))` }}>
+      <div className="wb-tbl" role="table" aria-label="Whiteboard table" style={{ gridTemplateColumns: `repeat(${nc}, minmax(0, 1fr))` }}>
         <RoughSvg draw={draw} animate={animate} duration={1000 / speed} onDone={svgDone} />
         {rows.map((row, r) => row.map((cell, c) => {
           const i = r * nc + c
@@ -393,12 +399,486 @@ export function DiagramVis({ item, animate, speed, seed, style, onDone, isZoom }
   return (
     <VisFrame style={style} isZoom={isZoom} zoomContent={<DiagramVis item={item} animate={false} speed={speed} seed={seed} isZoom />}>
       {(item.title || def.title) && <div className="wb-vtitle">{inlineMath(String(item.title || def.title))}</div>}
-      <div className={'wb-dg' + (drawn ? ' wb-dg-drawn' : '')}>
+      <div className={'wb-dg' + (drawn ? ' wb-dg-drawn' : '')} role="img" aria-label={String(item.title || def.title || item.name || 'Diagram')}>
         <RoughSvg draw={draw} animate={animate} duration={1700 / speed} onDone={svgDone} />
         {def.anchors.map((a, i) => labels[i] ? (
           <span key={i} className={'wb-dlab ' + (a.side === 'l' ? 'l' : 'r') + (drawn ? ' on' : '')}
             style={{ top: `${((a.ly ?? a.y) / DH) * 100}%`, transitionDelay: `${i * 110}ms`, color: MARKERS[i % MARKERS.length] }}>{labels[i]}</span>
         ) : null)}
+      </div>
+    </VisFrame>
+  )
+}
+
+/* ---------------- reaction visual (E6) ---------------- */
+interface ElementCount {
+  element: string
+  count: number
+}
+
+function parseFormula(formula: string): ElementCount[] {
+  const tokens: string[] = []
+  let m: RegExpExecArray | null
+  const tokenizer = /([A-Z][a-z]*|\d+|\(|\))/g
+  while ((m = tokenizer.exec(formula)) !== null) {
+    tokens.push(m[0])
+  }
+
+  type Frame = { counts: Map<string, number>; lastElem: string | null }
+  const frames: Frame[] = [{ counts: new Map(), lastElem: null }]
+
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i]
+    const cur = frames[frames.length - 1]
+    if (tok === '(') {
+      frames.push({ counts: new Map(), lastElem: null })
+    } else if (tok === ')') {
+      let mult = 1
+      if (i + 1 < tokens.length && /^\d+$/.test(tokens[i + 1])) {
+        mult = parseInt(tokens[i + 1], 10)
+        i++
+      }
+      const popped = frames.pop()
+      if (popped && frames.length > 0) {
+        const target = frames[frames.length - 1]
+        for (const [el, cnt] of popped.counts.entries()) {
+          target.counts.set(el, (target.counts.get(el) || 0) + cnt * mult)
+        }
+      }
+    } else if (/^\d+$/.test(tok)) {
+      const mult = parseInt(tok, 10)
+      if (cur.lastElem) {
+        const prev = cur.counts.get(cur.lastElem) || 1
+        cur.counts.set(cur.lastElem, prev - 1 + mult)
+        cur.lastElem = null
+      }
+    } else if (/^[A-Z][a-z]*$/.test(tok)) {
+      cur.counts.set(tok, (cur.counts.get(tok) || 0) + 1)
+      cur.lastElem = tok
+    }
+  }
+
+  const finalMap = frames[0].counts
+  const result: ElementCount[] = []
+  for (const [element, count] of finalMap.entries()) {
+    result.push({ element, count })
+  }
+  return result
+}
+
+interface ElementStyle {
+  fill: string
+  text: string
+  stroke?: string
+}
+
+function getElementStyle(element: string): ElementStyle {
+  switch (element) {
+    case 'H':
+      return { fill: '#ffffff', text: '#23211e', stroke: '#23211e' }
+    case 'O':
+      return { fill: '#d9472b', text: '#ffffff', stroke: '#23211e' }
+    case 'C':
+      return { fill: '#23211e', text: '#ffffff', stroke: '#23211e' }
+    case 'N':
+      return { fill: '#2f5fd0', text: '#ffffff', stroke: '#23211e' }
+    case 'Fe':
+      return { fill: '#d9822b', text: '#ffffff', stroke: '#23211e' }
+    case 'Cu':
+      return { fill: '#8b5a2b', text: '#ffffff', stroke: '#23211e' }
+    case 'Na':
+      return { fill: '#888d94', text: '#ffffff', stroke: '#23211e' }
+    case 'Cl':
+      return { fill: '#2f8a4c', text: '#ffffff', stroke: '#23211e' }
+    default:
+      return { fill: '#f0c93a', text: '#23211e', stroke: '#23211e' }
+  }
+}
+
+function getMoleculeAtoms(formula: string): string[] {
+  const parsed = parseFormula(formula)
+  if (!parsed.length) return [formula.slice(0, 2)]
+
+  let centralIdx = -1
+  for (let i = 0; i < parsed.length; i++) {
+    if (parsed[i].element !== 'H' && parsed[i].count === 1) {
+      centralIdx = i
+      break
+    }
+  }
+  if (centralIdx === -1) {
+    for (let i = 0; i < parsed.length; i++) {
+      if (parsed[i].element !== 'H') {
+        centralIdx = i
+        break
+      }
+    }
+  }
+  if (centralIdx === -1) centralIdx = 0
+
+  const atoms: string[] = []
+  const center = parsed[centralIdx]
+  atoms.push(center.element)
+  for (let i = 0; i < parsed.length; i++) {
+    const p = parsed[i]
+    const count = i === centralIdx ? p.count - 1 : p.count
+    for (let c = 0; c < count; c++) {
+      atoms.push(p.element)
+    }
+  }
+  return atoms.slice(0, 10)
+}
+
+interface AtomPos {
+  x: number
+  y: number
+  r: number
+}
+
+function getClusterLayout(atoms: string[]): { width: number; height: number; positions: AtomPos[] } {
+  const n = atoms.length
+  const r = 13
+  if (n <= 1) {
+    return { width: 40, height: 40, positions: [{ x: 20, y: 20, r }] }
+  }
+  if (n === 2) {
+    return {
+      width: 58,
+      height: 40,
+      positions: [
+        { x: 18, y: 20, r },
+        { x: 40, y: 20, r },
+      ],
+    }
+  }
+  if (n === 3) {
+    return {
+      width: 62,
+      height: 52,
+      positions: [
+        { x: 31, y: 18, r },
+        { x: 17, y: 35, r },
+        { x: 45, y: 35, r },
+      ],
+    }
+  }
+  if (n === 4) {
+    return {
+      width: 68,
+      height: 54,
+      positions: [
+        { x: 34, y: 18, r },
+        { x: 17, y: 36, r },
+        { x: 34, y: 38, r },
+        { x: 51, y: 36, r },
+      ],
+    }
+  }
+  if (n === 5) {
+    return {
+      width: 70,
+      height: 70,
+      positions: [
+        { x: 35, y: 35, r },
+        { x: 35, y: 15, r },
+        { x: 55, y: 35, r },
+        { x: 35, y: 55, r },
+        { x: 15, y: 35, r },
+      ],
+    }
+  }
+  const w = 78, h = 78
+  const cx = 39, cy = 39, dist = 21
+  const positions: AtomPos[] = [{ x: cx, y: cy, r }]
+  const rem = n - 1
+  for (let i = 0; i < rem; i++) {
+    const a = -Math.PI / 2 + (i / rem) * Math.PI * 2
+    positions.push({ x: cx + dist * Math.cos(a), y: cy + dist * Math.sin(a), r: 11 })
+  }
+  return { width: w, height: h, positions }
+}
+
+function AtomCluster({
+  formula,
+  seed,
+  animate,
+  delay = 0,
+}: {
+  formula: string
+  seed: number
+  animate: boolean
+  delay?: number
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const atoms = useMemo(() => getMoleculeAtoms(formula), [formula])
+  const layout = useMemo(() => getClusterLayout(atoms), [atoms])
+
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
+    const rc = rough.svg(svg)
+
+    layout.positions.forEach((pos, i) => {
+      const el = atoms[i] || 'X'
+      const st = getElementStyle(el)
+      const circle = rc.circle(pos.x, pos.y, pos.r * 2, {
+        fill: st.fill,
+        fillStyle: 'solid',
+        stroke: st.stroke || INK,
+        strokeWidth: 1.8,
+        roughness: 1.2,
+        seed: seed + i * 11,
+      })
+      svg.appendChild(circle)
+
+      const fSize = el.length > 1 ? 10.5 : 12.5
+      svg.appendChild(text(el, pos.x, pos.y + 4, fSize, st.text, 'middle', '700'))
+    })
+  }, [atoms, layout, seed])
+
+  const animStyle = animate ? { animationDelay: `${delay}ms` } : undefined
+
+  return (
+    <div className={`wb-rxn-cluster ${animate ? 'wb-pop-in' : ''}`} style={animStyle}>
+      <svg
+        ref={svgRef}
+        width={layout.width}
+        height={layout.height}
+        style={{ display: 'block', overflow: 'visible' }}
+      />
+    </div>
+  )
+}
+
+function ReactionArrow({ seed }: { seed: number }) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
+    const rc = rough.svg(svg)
+    const w = 44, y = 12
+    svg.appendChild(rc.line(3, y, w - 5, y, { stroke: INK, strokeWidth: 2.2, roughness: 1.2, seed }))
+    svg.appendChild(rc.line(w - 5, y, w - 16, y - 6, { stroke: INK, strokeWidth: 2, roughness: 1, seed: seed + 1 }))
+    svg.appendChild(rc.line(w - 5, y, w - 16, y + 6, { stroke: INK, strokeWidth: 2, roughness: 1, seed: seed + 2 }))
+  }, [seed])
+  return <svg ref={svgRef} width="44" height="24" style={{ display: 'block', overflow: 'visible' }} />
+}
+
+function ReactionPlus({ seed }: { seed: number }) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
+    const rc = rough.svg(svg)
+    svg.appendChild(rc.line(9, 2, 9, 18, { stroke: INK, strokeWidth: 2.2, roughness: 1.1, seed }))
+    svg.appendChild(rc.line(1, 10, 17, 10, { stroke: INK, strokeWidth: 2.2, roughness: 1.1, seed: seed + 1 }))
+  }, [seed])
+  return <svg ref={svgRef} width="18" height="20" style={{ display: 'block', overflow: 'visible' }} />
+}
+
+function formulaToLatex(formula: string): string {
+  return formula.replace(/(\d+)/g, '_{$1}')
+}
+
+function formatTermKaTex(count: number, formula: string): string {
+  const coef = count > 1 ? String(count) : ''
+  const texStr = `${coef}${formulaToLatex(formula)}`
+  try {
+    return katex.renderToString(texStr, { throwOnError: false, displayMode: false })
+  } catch {
+    return `${coef}${formula}`
+  }
+}
+
+interface AtomRow {
+  element: string
+  leftCount: number
+  rightCount: number
+  balanced: boolean
+}
+
+function getAtomCounts(
+  left: { formula: string; count: number }[],
+  right: { formula: string; count: number }[]
+): AtomRow[] {
+  const leftMap = new Map<string, number>()
+  const rightMap = new Map<string, number>()
+  const elements = new Set<string>()
+
+  for (const t of left) {
+    const parsed = parseFormula(t.formula)
+    for (const p of parsed) {
+      elements.add(p.element)
+      leftMap.set(p.element, (leftMap.get(p.element) || 0) + p.count * t.count)
+    }
+  }
+
+  for (const t of right) {
+    const parsed = parseFormula(t.formula)
+    for (const p of parsed) {
+      elements.add(p.element)
+      rightMap.set(p.element, (rightMap.get(p.element) || 0) + p.count * t.count)
+    }
+  }
+
+  const rows: AtomRow[] = []
+  for (const el of elements) {
+    const l = leftMap.get(el) || 0
+    const r = rightMap.get(el) || 0
+    rows.push({ element: el, leftCount: l, rightCount: r, balanced: l === r })
+  }
+  return rows
+}
+
+export function ReactionVis({ item, animate, speed, seed, style, onDone, isZoom }: VisProps<'reaction'>) {
+  const left = Array.isArray(item.left) ? item.left : []
+  const right = Array.isArray(item.right) ? item.right : []
+
+  const rows = useMemo(() => getAtomCounts(left, right), [left, right])
+  const allBalanced = rows.length > 0 && rows.every(r => r.balanced)
+
+  const totalClusters = useMemo(() => {
+    let sum = 0
+    left.forEach(t => { sum += Math.max(1, t.count) })
+    right.forEach(t => { sum += Math.max(1, t.count) })
+    return sum
+  }, [left, right])
+
+  const [drawn, svgDone] = useVis(animate, onDone, 350)
+
+  useEffect(() => {
+    if (!animate) {
+      svgDone()
+      return
+    }
+    const animDuration = Math.min(3000, ((totalClusters - 1) * 110 + 450) / speed)
+    const t = window.setTimeout(svgDone, animDuration)
+    return () => window.clearTimeout(t)
+  }, [animate, totalClusters, speed, svgDone])
+
+  let clusterIdx = 0
+
+  return (
+    <VisFrame
+      style={style}
+      isZoom={isZoom}
+      zoomContent={<ReactionVis item={item} animate={false} speed={speed} seed={seed} isZoom />}
+    >
+      <div className="wb-rxn" role="img" aria-label={item.label ? String(item.label) : 'Chemical reaction diagram'}>
+        <div className="wb-rxn-equation">
+          {/* Left side terms */}
+          <div className="wb-rxn-side">
+            {left.map((term, tIdx) => {
+              const html = formatTermKaTex(term.count, term.formula)
+              return (
+                <div key={`l-${tIdx}`} style={{ display: 'contents' }}>
+                  {tIdx > 0 && (
+                    <div className="wb-rxn-op">
+                      <ReactionPlus seed={seed + 50 + tIdx} />
+                    </div>
+                  )}
+                  <div className="wb-rxn-term">
+                    <div className="wb-rxn-clusters">
+                      {Array.from({ length: Math.min(12, Math.max(1, term.count)) }).map((_, cIdx) => {
+                        const cur = clusterIdx++
+                        return (
+                          <AtomCluster
+                            key={`lc-${tIdx}-${cIdx}`}
+                            formula={term.formula}
+                            seed={seed + tIdx * 30 + cIdx * 7}
+                            animate={animate}
+                            delay={(cur * 110) / speed}
+                          />
+                        )
+                      })}
+                    </div>
+                    <div className="wb-rxn-formula" dangerouslySetInnerHTML={{ __html: html }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Arrow */}
+          <div className="wb-rxn-arrow-wrap">
+            <ReactionArrow seed={seed + 99} />
+          </div>
+
+          {/* Right side terms */}
+          <div className="wb-rxn-side">
+            {right.map((term, tIdx) => {
+              const html = formatTermKaTex(term.count, term.formula)
+              return (
+                <div key={`r-${tIdx}`} style={{ display: 'contents' }}>
+                  {tIdx > 0 && (
+                    <div className="wb-rxn-op">
+                      <ReactionPlus seed={seed + 150 + tIdx} />
+                    </div>
+                  )}
+                  <div className="wb-rxn-term">
+                    <div className="wb-rxn-clusters">
+                      {Array.from({ length: Math.min(12, Math.max(1, term.count)) }).map((_, cIdx) => {
+                        const cur = clusterIdx++
+                        return (
+                          <AtomCluster
+                            key={`rc-${tIdx}-${cIdx}`}
+                            formula={term.formula}
+                            seed={seed + 200 + tIdx * 30 + cIdx * 7}
+                            animate={animate}
+                            delay={(cur * 110) / speed}
+                          />
+                        )
+                      })}
+                    </div>
+                    <div className="wb-rxn-formula" dangerouslySetInnerHTML={{ __html: html }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Atom count mini-table */}
+        <div className={`wb-rxn-table-wrap ${drawn ? 'on' : ''}`}>
+          <div className="wb-rxn-table">
+            <div className="wb-rxn-thead">
+              <div>Element</div>
+              <div>Left</div>
+              <div>Right</div>
+              <div>Balanced</div>
+            </div>
+            {rows.map(r => {
+              const st = getElementStyle(r.element)
+              return (
+                <div key={r.element} className="wb-rxn-row">
+                  <div className="wb-rxn-el">
+                    <span className="wb-rxn-dot" style={{ backgroundColor: st.fill, color: st.text }}>
+                      {r.element}
+                    </span>
+                    <span>{r.element}</span>
+                  </div>
+                  <div>{r.leftCount}</div>
+                  <div>{r.rightCount}</div>
+                  <div>
+                    {r.balanced ? (
+                      <span className="wb-rxn-tick" title="Balanced">✓</span>
+                    ) : (
+                      <span className="wb-rxn-cross" title="Not balanced">✗</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className={`wb-rxn-status ${allBalanced ? 'balanced' : 'unbalanced'}`}>
+            {allBalanced ? 'Balanced reaction ✓' : 'Not yet balanced ✗'}
+          </div>
+        </div>
+
+        {item.label && <div className={`wb-vcap ${drawn ? 'on' : ''}`}>{inlineMath(String(item.label))}</div>}
       </div>
     </VisFrame>
   )

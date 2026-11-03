@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
 import type { Source, SourceKind, Notebook } from '../../lib/notebook/types'
 import type { CatalogClass, NcertCatalog } from '../../types'
@@ -12,7 +12,7 @@ import {
   addWikiSource,
 } from '../../lib/notebook/sources'
 import { sourceGuide } from '../../lib/notebook/ai'
-import { SketchButton, Icon } from '../ui'
+import { SketchButton, Icon, Chip } from '../ui'
 
 export interface SourcesProps {
   notebook: Notebook
@@ -24,10 +24,31 @@ type AddTab = 'ncert' | 'pdf' | 'photo' | 'text' | 'url' | 'wiki'
 
 export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const openerRef = useRef<HTMLElement | null>(null)
   const [activeTab, setActiveTab] = useState<AddTab>('ncert')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [loadingMsg, setLoadingMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const openModal = () => {
+    openerRef.current = document.activeElement as HTMLElement | null
+    setErrorMsg(null)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    openerRef.current?.focus()
+  }
+
+  useEffect(() => {
+    if (!isModalOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loadingMsg) closeModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isModalOpen, loadingMsg])
 
   // NCERT Tab Form State
   const catalog = catalogJson as unknown as NcertCatalog
@@ -48,11 +69,44 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
     return currentClass.subjects.find(s => s.id === selectedSubjectId) ?? currentClass.subjects[0]
   }, [currentClass, selectedSubjectId])
 
+  const MEDIUM_KEY = 'doodle-medium'
+  const [bookMedium, setBookMedium] = useState<'en' | 'hi'>(() => {
+    try {
+      const saved = localStorage.getItem(MEDIUM_KEY)
+      if (saved === 'en' || saved === 'hi') return saved
+    } catch { /* ignore */ }
+    return notebook.language === 'hi-IN' ? 'hi' : 'en'
+  })
+
+  const handleMediumChange = (m: 'en' | 'hi') => {
+    setBookMedium(m)
+    try {
+      localStorage.setItem(MEDIUM_KEY, m)
+    } catch { /* ignore */ }
+    setSelectedBookCode('')
+    setSelectedChapterFile('')
+    setSelectedSectionId('')
+  }
+
   const [selectedBookCode, setSelectedBookCode] = useState<string>('')
+  const { booksForSubject, hasMatchingMedium } = useMemo(() => {
+    const allBooks = currentSubject?.books ?? []
+    const matching = allBooks.filter(b => b.medium === bookMedium)
+    if (matching.length > 0) {
+      return { booksForSubject: matching, hasMatchingMedium: true }
+    }
+    const otherMedium = bookMedium === 'en' ? 'hi' : 'en'
+    const fallback = allBooks.filter(b => b.medium === otherMedium)
+    return {
+      booksForSubject: fallback.length > 0 ? fallback : allBooks,
+      hasMatchingMedium: false,
+    }
+  }, [currentSubject, bookMedium])
+
   const currentBook = useMemo(() => {
-    if (!currentSubject?.books?.length) return undefined
-    return currentSubject.books.find(b => b.code === selectedBookCode) ?? currentSubject.books[0]
-  }, [currentSubject, selectedBookCode])
+    if (!booksForSubject.length) return undefined
+    return booksForSubject.find(b => b.code === selectedBookCode) ?? booksForSubject[0]
+  }, [booksForSubject, selectedBookCode])
 
   const [selectedChapterFile, setSelectedChapterFile] = useState<string>('')
   const currentChapter = useMemo(() => {
@@ -281,10 +335,7 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
           variant="ghost"
           style={{ padding: '4px 10px', fontSize: '0.9rem' }}
           disabled={notebook.sources.length >= 20}
-          onClick={() => {
-            setErrorMsg(null)
-            setIsModalOpen(true)
-          }}
+          onClick={openModal}
         >
           + Add source
         </SketchButton>
@@ -312,6 +363,7 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
                     className="nb-source-check"
                     checked={s.enabled}
                     onChange={() => toggleSourceEnabled(s.id)}
+                    aria-label={s.enabled ? `Disable source ${s.title}` : `Enable source ${s.title}`}
                     title={s.enabled ? 'Disable source' : 'Enable source'}
                   />
                   <div className="nb-source-info">
@@ -325,6 +377,7 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
                       type="button"
                       className="nb-icon-btn"
                       onClick={() => setExpandedId(isExpanded ? null : s.id)}
+                      aria-label={isExpanded ? `Hide guide for ${s.title}` : `Show guide for ${s.title}`}
                       title={isExpanded ? 'Hide guide' : 'Show guide'}
                     >
                       <Icon name={isExpanded ? 'back' : 'next'} size={14} />
@@ -333,6 +386,7 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
                       type="button"
                       className="nb-icon-btn is-danger"
                       onClick={() => deleteSource(s.id)}
+                      aria-label={`Delete source ${s.title}`}
                       title="Delete source"
                     >
                       <Icon name="cross" size={14} />
@@ -390,15 +444,22 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
 
       {/* Add Source Modal / Sheet */}
       {isModalOpen && (
-        <div className="nb-modal-backdrop" onClick={() => !loadingMsg && setIsModalOpen(false)}>
-          <div className="nb-modal-card" onClick={e => e.stopPropagation()}>
+        <div className="nb-modal-backdrop" onClick={() => !loadingMsg && closeModal()}>
+          <div
+            className="nb-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add Study Source"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="nb-modal-head">
               <h3>Add Study Source</h3>
               <button
                 type="button"
                 className="nb-icon-btn"
+                aria-label="Close"
                 disabled={!!loadingMsg}
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
               >
                 <Icon name="cross" size={18} />
               </button>
@@ -505,6 +566,30 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
                     </div>
                   )}
 
+                  <div className="nb-form-field">
+                    <label>Book medium</label>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      <Chip
+                        selected={bookMedium === 'en'}
+                        onClick={() => handleMediumChange('en')}
+                      >
+                        English
+                      </Chip>
+                      <Chip
+                        selected={bookMedium === 'hi'}
+                        onClick={() => handleMediumChange('hi')}
+                      >
+                        हिन्दी
+                      </Chip>
+                    </div>
+                  </div>
+
+                  {currentSubject && !hasMatchingMedium && currentSubject.books.length > 0 && (
+                    <p style={{ margin: '4px 0 10px', fontSize: '0.85rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>
+                      No {bookMedium === 'en' ? 'English' : 'Hindi'}-medium books for this subject. Showing {bookMedium === 'en' ? 'Hindi' : 'English'} medium.
+                    </p>
+                  )}
+
                   {currentSubject && (
                     <div className="nb-form-field">
                       <label>Book</label>
@@ -517,7 +602,7 @@ export default function Sources({ notebook, onUpdateNotebook, onAsk }: SourcesPr
                           setSelectedSectionId('')
                         }}
                       >
-                        {currentSubject.books.map(b => (
+                        {booksForSubject.map(b => (
                           <option key={b.code} value={b.code}>
                             {b.title} ({b.medium === 'hi' ? 'Hindi' : 'English'})
                           </option>

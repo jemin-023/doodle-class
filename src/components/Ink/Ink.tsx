@@ -260,8 +260,21 @@ export function InkCard({ hit, busy, lang, onAsk, onClose }: InkCardProps) {
   const send = (q: string) => { const t = q.trim(); if (t && !busy) onAsk(t + named) }
   const chips = ["I don't get this", 'Explain again, simpler', 'Show an example']
   useEffect(() => () => stopListening(), [])
+
+  useEffect(() => {
+    const prevFocused = document.activeElement as HTMLElement | null
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      prevFocused?.focus()
+    }
+  }, [onClose])
+
   return createPortal(
-    <div className="ink-card" role="dialog" aria-label="Teacher noticed what you circled">
+    <div className="ink-card" role="dialog" aria-modal="true" aria-label="Teacher noticed what you circled">
       <button type="button" className="ink-x" aria-label="Close" onClick={onClose}><Icon name="cross" size={18} /></button>
       <p className="ink-q">
         {hit ? <>You circled <b>{label}</b>. What&rsquo;s confusing?</> : <>What part is tricky?</>}
@@ -270,7 +283,7 @@ export function InkCard({ hit, busy, lang, onAsk, onClose }: InkCardProps) {
         {chips.map(c => <button key={c} type="button" className="ui-chip ink-chip" disabled={busy} onClick={() => send(c)}>{c}</button>)}
       </div>
       <div className="ink-row">
-        <TextInput value={text} disabled={busy} placeholder="Or type it here" onChange={e => setText(e.target.value)}
+        <TextInput value={text} disabled={busy} placeholder="Or type it here" aria-label="What is confusing?" onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') send(text) }} />
         {sttSupported() && <button type="button" className="pg-ib" disabled={busy} aria-label="Speak your question" onClick={mic}>{ls === 'idle' ? 'Speak' : 'Stop'}</button>}
         <SketchButton disabled={busy || !text.trim()} onClick={() => send(text)}>Ask</SketchButton>

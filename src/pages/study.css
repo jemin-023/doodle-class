@@ -90,3 +90,9 @@
 .hm-s { font-size: .88rem; color: var(--ink-soft); line-height: 1.25; }
 .hm-anything { margin-top: 8px; border-bottom-color: var(--marker-green); scroll-margin-top: 80px; }
 @media (min-width: 700px) { .hm-menu { grid-template-columns: repeat(3, 1fr); gap: 24px 20px; } .hm-t { font-size: 1.8rem; } }
+
+/* B9: Book medium toggle & note */
+.st-medium-row { margin-bottom: 12px; }
+.st-medium-note { font-size: 0.95rem; margin: 4px 0 16px; color: var(--ink-soft); font-style: italic; }
+.st-voice-tag { display: block; font-size: 0.68rem; line-height: 1; opacity: 0.8; margin-top: 2px; }
+

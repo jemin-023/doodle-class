@@ -2,7 +2,7 @@ import katex from 'katex'
 // OWNED BY: Board lane. Board item schema for prompts + server-side sanitising.
 // Every prompt that asks the model for board items interpolates BOARD_ITEM_SHAPES, so changing it here
 // changes lesson, lesson-stream, ask and chat at once.
-export const BOARD_KINDS = ['title', 'text', 'bullet', 'equation', 'highlight', 'example', 'drawing', 'numberline', 'fraction', 'chart', 'table', 'diagram']
+export const BOARD_KINDS = ['title', 'text', 'bullet', 'equation', 'highlight', 'example', 'drawing', 'numberline', 'fraction', 'chart', 'table', 'diagram', 'reaction']
 export const BOARD_SHAPES = ['circle', 'arrow', 'box', 'star', 'underline', 'divider']
 
 // Doodle diagram library: name -> parts, in the order labels[] are written on the picture.
@@ -67,11 +67,12 @@ export const DIAGRAMS = Object.keys(DIAGRAM_PARTS)
 const diagramKey = n => { const k = String(n || '').toLowerCase().trim().replace(/[\s_]+/g, '-'); return DIAGRAM_PARTS[k] ? k : null }
 
 export const BOARD_ITEM_SHAPES = `Item shapes: {"kind":"title"|"text"|"bullet"|"equation"|"highlight"|"example","text":string} or {"kind":"drawing","shape":"circle"|"arrow"|"box"|"star"|"underline"|"divider","label"?:string}.
-Rich visuals (each is ONE item, max 1 per step). RULE: use a rich visual whenever one genuinely shows THIS topic (usually in step 2 or 3, 2 or more when the topic allows); NEVER use a diagram about a different topic just to have a picture (no water-cycle in a chemistry lesson, no atom in a history lesson). When no diagram fits, prefer a table, chart or highlight (maths: fraction/numberline; data/comparison: chart/table; science/body/nature/shapes: diagram). They teach better than extra text or drawings, so use them INSTEAD of drawing items and of repeating text. If a listed diagram name matches the topic or a part of it (e.g. area of a rectangle -> rectangle-area, rain -> water-cycle), use it:
+Rich visuals (each is ONE item, max 1 per step). RULE: use a rich visual whenever one genuinely shows THIS topic (usually in step 2 or 3, 2 or more when the topic allows); NEVER use a diagram about a different topic just to have a picture (no water-cycle in a chemistry lesson, no atom in a history lesson). When no diagram fits, prefer a table, chart or highlight (maths: fraction/numberline; data/comparison: chart/table; chemistry: reaction; science/body/nature/shapes: diagram). They teach better than extra text or drawings, so use them INSTEAD of drawing items and of repeating text. If a listed diagram name matches the topic or a part of it (e.g. area of a rectangle -> rectangle-area, rain -> water-cycle), use it:
 {"kind":"numberline","from":-3,"to":6,"marks":[2,5],"label"?:string} (marks = dots with hops between them; from/to whole or decimal numbers)
 {"kind":"fraction","num":3,"den":4,"label"?:string} (a shaded pie; num>den draws several pies)
 {"kind":"chart","chart":"bar"|"line","labels":["Mon","Tue"],"values":[3,5],"title"?:string} (2-8 points, values >= 0, same length as labels)
 {"kind":"table","rows":[["Head","Head"],["a","b"]]} (row 0 is the header; max 5 rows x 4 columns; short cells)
+{"kind":"reaction","left":[{"formula":"H2","count":2},{"formula":"O2","count":1}],"right":[{"formula":"H2O","count":2}],"label"?:string} (show a chemical equation being balanced, with atoms counted on each side; 1-4 terms per side, counts 1-12)
 {"kind":"diagram","name":string,"title"?:string} (the parts are labelled automatically; do NOT send labels) where name is EXACTLY one of these (its labelled parts shown in brackets): ${DIAGRAMS.map(n => `${n} (${DIAGRAM_PARTS[n].join(', ')})`).join('; ')}. Never invent other diagram names.`
 
 const str = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n)
@@ -124,6 +125,29 @@ function cleanVisual(b) {
       const title = str(b.title, 50)
       return { kind: 'diagram', name, ...(title ? { title } : {}) }
     }
+    case 'reaction': {
+      if (!Array.isArray(b.left) || !Array.isArray(b.right)) return null
+      const cleanSide = side => {
+        if (!Array.isArray(side)) return null
+        const items = side.slice(0, 4)
+        if (items.length < 1) return null
+        const terms = []
+        for (const t of items) {
+          if (!t || typeof t !== 'object') return null
+          const formula = typeof t.formula === 'string' ? t.formula.trim() : ''
+          if (!/^[A-Z][A-Za-z0-9()]{0,15}$/.test(formula)) return null
+          const count = num(t.count, 100)
+          if (count === null || !Number.isInteger(count) || count < 1 || count > 12) return null
+          terms.push({ formula, count })
+        }
+        return terms.length >= 1 ? terms : null
+      }
+      const left = cleanSide(b.left)
+      const right = cleanSide(b.right)
+      if (!left || !right) return null
+      const label = str(b.label, 60)
+      return { kind: 'reaction', left, right, ...(label ? { label } : {}) }
+    }
   }
   return null
 }
@@ -160,7 +184,7 @@ export function sanitizeStep(s) {
         if (!BOARD_SHAPES.includes(b.shape)) return null
         return b.label ? { kind: 'drawing', shape: b.shape, label: String(b.label).slice(0, 40) } : { kind: 'drawing', shape: b.shape }
       }
-      if (['numberline', 'fraction', 'chart', 'table', 'diagram'].includes(b.kind)) {
+      if (['numberline', 'fraction', 'chart', 'table', 'diagram', 'reaction'].includes(b.kind)) {
         try { return cleanVisual(b) } catch { return null }
       }
       const text = String(b.text || '').trim()

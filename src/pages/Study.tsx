@@ -24,6 +24,8 @@ const FIXTURE: NcertCatalog = {
 const CATALOG = (catalogJson as unknown as NcertCatalog).classes?.length ? (catalogJson as unknown as NcertCatalog) : FIXTURE
 
 const KEY = 'doodle-prefs'
+const MEDIUM_KEY = 'doodle-medium'
+
 function loadPrefs(): { c: string; l: LanguageCode; g: number } {
   const d = { c: 'bolt', l: 'en-IN' as LanguageCode, g: 5 }
   try {
@@ -34,6 +36,14 @@ function loadPrefs(): { c: string; l: LanguageCode; g: number } {
       g: typeof p.g === 'number' && p.g >= 1 && p.g <= 10 ? p.g : d.g,
     }
   } catch { return d }
+}
+
+function loadMedium(fallbackLang: LanguageCode): 'en' | 'hi' {
+  try {
+    const saved = localStorage.getItem(MEDIUM_KEY)
+    if (saved === 'en' || saved === 'hi') return saved
+  } catch { /* ignore */ }
+  return fallbackLang === 'hi-IN' ? 'hi' : 'en'
 }
 
 export function teacherFor(subject: string): string {
@@ -100,13 +110,41 @@ export default function Study() {
   const [charPick, setCharPick] = useState<string | null>(null)
   const [lang, setLang] = useState<LanguageCode>(prefs.l)
   const [englishBoard, setEnglishBoard] = useEnglishBoard()
+  const [medium, setMedium] = useState<'en' | 'hi'>(() => loadMedium(prefs.l))
+
+  const setMediumChoice = (m: 'en' | 'hi') => {
+    setMedium(m)
+    try { localStorage.setItem(MEDIUM_KEY, m) } catch { /* ignore */ }
+  }
+
+  const handleLangChange = (l: LanguageCode) => {
+    setLang(l)
+    try {
+      if (!localStorage.getItem(MEDIUM_KEY)) {
+        setMedium(l === 'hi-IN' ? 'hi' : 'en')
+      }
+    } catch { /* ignore */ }
+  }
 
   const resume = useMemo(() => getResume(), [])
   const progress = useMemo(() => getSectionProgress(), [])
 
   const cls = CATALOG.classes.find(c => c.grade === grade)
   const subject: CatalogSubject | undefined = cls?.subjects.find(s => s.id === subjectId)
-  const book: CatalogBook | undefined = subject ? (subject.books.length === 1 ? subject.books[0] : subject.books.find(b => b.code === bookCode)) : undefined
+
+  const matchingBooks = useMemo(() => {
+    return subject ? subject.books.filter(b => b.medium === medium) : []
+  }, [subject, medium])
+  const hasMatchingMedium = matchingBooks.length > 0
+  const booksToShow = useMemo(() => {
+    if (!subject) return []
+    if (hasMatchingMedium) return matchingBooks
+    const otherMedium = medium === 'en' ? 'hi' : 'en'
+    const fallback = subject.books.filter(b => b.medium === otherMedium)
+    return fallback.length > 0 ? fallback : subject.books
+  }, [subject, hasMatchingMedium, matchingBooks, medium])
+
+  const book: CatalogBook | undefined = subject ? subject.books.find(b => b.code === bookCode) : undefined
   const chapter: CatalogChapter | undefined = book?.chapters.find(c => c.file === chapterFile)
   const cid = charPick ?? teacherFor(subject?.name ?? '')
 
@@ -141,11 +179,11 @@ export default function Study() {
   // breadcrumbs (each crumb clears everything after it)
   const crumbs: { label: string; patch: Record<string, string | null> }[] = []
   if (subject) crumbs.push({ label: subject.name, patch: { book: null, chapter: null } })
-  if (subject && subject.books.length > 1 && book) crumbs.push({ label: book.title, patch: { chapter: null } })
+  if (subject && book) crumbs.push({ label: book.title, patch: { chapter: null } })
   if (chapter) crumbs.push({ label: `Ch ${chapter.n} · ${chapter.title}`, patch: {} })
   const back = () => {
     if (chapter) return upd({ chapter: null })
-    if (subject && subject.books.length > 1 && book) return upd({ book: null })
+    if (subject && book) return upd({ book: null })
     if (subject) return upd({ subject: null, book: null })
     nav('/')
   }
@@ -221,17 +259,37 @@ export default function Study() {
         )}
 
         {subject && !book && (
-          <ul className="st-list">
-            {subject.books.map((b, i) => (
-              <li key={b.code}>
-                <button type="button" className="st-item" onClick={() => upd({ book: b.code, chapter: null })}>
-                  <SketchCard tilt={i % 2 ? 0.6 : -0.6}>
-                    <span className="st-row"><Icon name="book" size={30} /><span className="st-t">{b.title}</span><span className="st-tag">{b.medium === 'hi' ? 'Hindi' : 'English'}</span></span>
-                  </SketchCard>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="st-book-step">
+            <div className="pg-row st-medium-row">
+              <span className="pg-label">Book medium</span>
+              <div className="pg-chips">
+                <Chip selected={medium === 'en'} onClick={() => setMediumChoice('en')}>English</Chip>
+                <Chip selected={medium === 'hi'} onClick={() => setMediumChoice('hi')}>हिन्दी</Chip>
+              </div>
+            </div>
+
+            {!hasMatchingMedium && subject.books.length > 0 && (
+              <p className="pg-note st-medium-note">
+                No {medium === 'en' ? 'English' : 'Hindi'}-medium books for this subject. Showing {medium === 'en' ? 'Hindi' : 'English'} medium.
+              </p>
+            )}
+
+            <ul className="st-list">
+              {booksToShow.map((b, i) => (
+                <li key={b.code}>
+                  <button type="button" className="st-item" onClick={() => upd({ book: b.code, chapter: null })}>
+                    <SketchCard tilt={i % 2 ? 0.6 : -0.6}>
+                      <span className="st-row">
+                        <Icon name="book" size={30} />
+                        <span className="st-t">{b.title}</span>
+                        <span className="st-tag">{b.medium === 'hi' ? 'Hindi' : 'English'}</span>
+                      </span>
+                    </SketchCard>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {book && !chapter && (
@@ -350,7 +408,14 @@ export default function Study() {
               <div className="pg-row">
                 <span className="pg-label">Language</span>
                 <div className="pg-chips">
-                  {LANGUAGES.map(l => <Chip key={l.code} selected={l.code === lang} onClick={() => setLang(l.code)}>{l.label}</Chip>)}
+                  {LANGUAGES.map(l => (
+                    <Chip key={l.code} selected={l.code === lang} onClick={() => handleLangChange(l.code)}>
+                      {l.label}
+                      {(l.code === 'sa-IN' || l.code === 'ur-IN') && (
+                        <span className="st-voice-tag">voice: browser</span>
+                      )}
+                    </Chip>
+                  ))}
                 </div>
               </div>
               {!test && <BoardLangToggle lang={lang} on={englishBoard} onChange={setEnglishBoard} />}

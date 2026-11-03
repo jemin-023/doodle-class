@@ -61,3 +61,6 @@ For each finished worker:
   - Client: `src/lib/deep.ts`, used by `src/pages/Learn.tsx` when the URL has `ncert=`.
 - English-medium mode: the `board=en-IN` URL param, or `boardLanguage` in requests; prompts use `boardRule()` in `_sarvam.js`.
 - Notebook: `src/lib/notebook/*` (store, chunk, retrieve, sources, ai), the pages Notebooks and NotebookPage, and studio tools auto-discovered from `src/components/Studio/tools/*.tsx`.
+
+## Continuous loop (started by Claude)
+`.agents/loop.sh` runs in the background (log `.agents/logs/loop.out`, per-round logs `.agents/logs/loop-N.log`, change log `.agents/loop-log.md`). It waits for x1–x3 and the NCERT fetch, then repeats: agy improves one thing (`.agents/orders/loop.md`), then tsc and build, then up to 2 fix attempts, then a commit as jemin-023 (or a rollback). **Stop it with `touch .agents/STOP`**; it finishes the current round and exits. Note that x1–x3 output gets committed by the loop's first round only if it compiles.

@@ -64,3 +64,14 @@ html.a11y-reduced-motion *::after {
   animation: none !important;
   transition: none !important;
 }
+
+/* ---- Offline lessons list ---- */
+.pf-offline-section { margin-top: 24px; }
+.pf-offline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.pf-offline-list { display: flex; flex-direction: column; gap: 10px; }
+.pf-offline-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 2px solid var(--ink); border-radius: 10px; background: var(--board, #fff); }
+.pf-offline-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pf-offline-title { font-family: var(--font-hand); font-size: 1.2rem; font-weight: 700; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-offline-meta { font-size: 0.85rem; color: var(--ink-soft); }
+.pf-offline-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.pf-offline-empty { font-family: var(--font-hand); font-size: 1.1rem; color: var(--ink-soft); text-align: center; padding: 12px; margin: 0; }

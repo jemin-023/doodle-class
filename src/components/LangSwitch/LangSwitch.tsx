@@ -88,7 +88,7 @@ export default function LangSwitch({ lesson, current, disabled, onSwitch, boardL
 
   return (
     <div className="ls-root" ref={root} onKeyDown={onKey}>
-      <button type="button" className="ls-chip" disabled={disabled} aria-haspopup="listbox" aria-expanded={open}
+      <button type="button" className="ls-chip" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-label={`Choose narration language, currently ${curLabel}`}
         onClick={() => { setErr(''); setOpen(o => !o) }}>
         <span className="ls-lbl">Speak in:</span> <span className="ls-cur" lang={current.slice(0, 2)}>{busy ? 'Translating…' : curLabel}</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M2 4 L6 8.4 L10 4" /></svg>
@@ -97,13 +97,15 @@ export default function LangSwitch({ lesson, current, disabled, onSwitch, boardL
       <div className="ls-live" role="status" aria-live="polite">{busy ? 'Translating…' : err}</div>
       {err && !open && <div className="ls-err">{err}</div>}
       {open && (
-        <div className="ls-pop" ref={pop} style={{ transform: `translateX(${shift}px)` }} role="listbox" aria-label="Choose a language">
-          {LANGUAGES.map(l => (
-            <button key={l.code} type="button" role="option" aria-selected={l.code === current} disabled={!!busy}
-              className={'ls-opt' + (l.code === current ? ' is-cur' : '') + (busy === l.code ? ' is-busy' : '')} onClick={() => pick(l.code)}>
-              {busy === l.code ? 'Translating…' : l.label}
-            </button>
-          ))}
+        <div className="ls-pop" ref={pop} style={{ transform: `translateX(${shift}px)` }} role="dialog" aria-modal="true" aria-label="Choose narration language">
+          <div role="listbox" aria-label="Languages">
+            {LANGUAGES.map(l => (
+              <button key={l.code} type="button" role="option" aria-selected={l.code === current} disabled={!!busy}
+                className={'ls-opt' + (l.code === current ? ' is-cur' : '') + (busy === l.code ? ' is-busy' : '')} onClick={() => pick(l.code)}>
+                {busy === l.code ? 'Translating…' : l.label}
+              </button>
+            ))}
+          </div>
           {err && <div className="ls-err">{err}</div>}
         </div>
       )}

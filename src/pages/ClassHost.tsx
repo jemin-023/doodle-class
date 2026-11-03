@@ -69,6 +69,7 @@ function teacherForSubject(subjectName: string): string {
 }
 
 const CATALOG = catalogJson as unknown as NcertCatalog
+const MEDIUM_KEY = 'doodle-medium'
 
 function Setup() {
   const nav = useNavigate()
@@ -80,6 +81,31 @@ function Setup() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
+  const [bookMedium, setBookMedium] = useState<'en' | 'hi'>(() => {
+    try {
+      const saved = localStorage.getItem(MEDIUM_KEY)
+      if (saved === 'en' || saved === 'hi') return saved
+    } catch { /* ignore */ }
+    return language === 'hi-IN' ? 'hi' : 'en'
+  })
+
+  const onMediumChange = (m: 'en' | 'hi') => {
+    setBookMedium(m)
+    try { localStorage.setItem(MEDIUM_KEY, m) } catch { /* ignore */ }
+    setNcertBookCode('')
+    setNcertChapterFile('')
+    setNcertSecId('')
+  }
+
+  const onLanguageChange = (l: LanguageCode) => {
+    setLanguage(l)
+    try {
+      if (!localStorage.getItem(MEDIUM_KEY)) {
+        setBookMedium(l === 'hi-IN' ? 'hi' : 'en')
+      }
+    } catch { /* ignore */ }
+  }
+
   // NCERT picker state
   const [ncertSubjectId, setNcertSubjectId] = useState('')
   const [ncertBookCode, setNcertBookCode] = useState('')
@@ -89,8 +115,20 @@ function Setup() {
   const cls = useMemo(() => CATALOG.classes?.find(c => c.grade === grade), [grade])
   const subjects = useMemo(() => cls?.subjects ?? [], [cls])
   const currentSubject: CatalogSubject | undefined = useMemo(() => subjects.find(s => s.id === ncertSubjectId) ?? subjects[0], [subjects, ncertSubjectId])
-  const books: CatalogBook[] = useMemo(() => currentSubject?.books ?? [], [currentSubject])
-  const currentBook: CatalogBook | undefined = useMemo(() => books.find(b => b.code === ncertBookCode) ?? books[0], [books, ncertBookCode])
+  const allBooks: CatalogBook[] = useMemo(() => currentSubject?.books ?? [], [currentSubject])
+  const { filteredBooks, hasMatchingMedium } = useMemo(() => {
+    const matching = allBooks.filter(b => b.medium === bookMedium)
+    if (matching.length > 0) {
+      return { filteredBooks: matching, hasMatchingMedium: true }
+    }
+    const otherMedium = bookMedium === 'en' ? 'hi' : 'en'
+    const fallback = allBooks.filter(b => b.medium === otherMedium)
+    return {
+      filteredBooks: fallback.length > 0 ? fallback : allBooks,
+      hasMatchingMedium: false,
+    }
+  }, [allBooks, bookMedium])
+  const currentBook: CatalogBook | undefined = useMemo(() => filteredBooks.find(b => b.code === ncertBookCode) ?? filteredBooks[0], [filteredBooks, ncertBookCode])
   const chapters: CatalogChapter[] = useMemo(() => currentBook?.chapters ?? [], [currentBook])
   const currentChapter: CatalogChapter | undefined = useMemo(() => chapters.find(c => c.file === ncertChapterFile) ?? chapters[0], [chapters, ncertChapterFile])
   const sections: CatalogSection[] = useMemo(() => currentChapter?.sections ?? [], [currentChapter])
@@ -194,11 +232,23 @@ function Setup() {
                 ))}
               </div>
 
-              {books.length > 1 && (
+              <span className="pg-label">Book medium</span>
+              <div className="cl-chips">
+                <Chip selected={bookMedium === 'en'} onClick={() => onMediumChange('en')}>English</Chip>
+                <Chip selected={bookMedium === 'hi'} onClick={() => onMediumChange('hi')}>हिन्दी</Chip>
+              </div>
+
+              {!hasMatchingMedium && allBooks.length > 0 && (
+                <p className="pg-note" style={{ margin: '4px 0 12px', fontStyle: 'italic', color: 'var(--ink-soft)' }}>
+                  No {bookMedium === 'en' ? 'English' : 'Hindi'}-medium books for this subject. Showing {bookMedium === 'en' ? 'Hindi' : 'English'} medium.
+                </p>
+              )}
+
+              {filteredBooks.length > 1 && (
                 <>
                   <span className="pg-label">Book</span>
                   <div className="cl-chips">
-                    {books.map(b => (
+                    {filteredBooks.map(b => (
                       <Chip
                         key={b.code}
                         selected={(currentBook?.code ?? '') === b.code}
@@ -267,8 +317,13 @@ function Setup() {
           <span className="pg-label">Language</span>
           <div className="cl-chips">
             {LANGUAGES.map(l => (
-              <Chip key={l.code} selected={language === l.code} onClick={() => setLanguage(l.code)}>
+              <Chip key={l.code} selected={language === l.code} onClick={() => onLanguageChange(l.code)}>
                 {l.label}
+                {(l.code === 'sa-IN' || l.code === 'ur-IN') && (
+                  <span style={{ display: 'block', fontSize: '0.68rem', lineHeight: 1, opacity: 0.8, marginTop: 2 }}>
+                    voice: browser
+                  </span>
+                )}
               </Chip>
             ))}
           </div>

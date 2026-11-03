@@ -110,6 +110,7 @@ export default function NotebookPage() {
       <div className="nb-page-wrap">
         {/* Notebook Title & Settings Bar */}
         <header className="nb-header">
+          <h1 className="sr-only">{notebook.title || 'Study notebook'}</h1>
           <div className="nb-header-top">
             <div className="nb-title-wrap">
               <input

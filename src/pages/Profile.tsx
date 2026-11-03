@@ -10,6 +10,7 @@ import { rememberedCount } from '../lib/memory'
 import { getProfile, saveProfile, type Profile as P } from '../lib/profile'
 import { seedDemoData } from '../lib/demo'
 import { getSettings, saveSettings, type Settings } from '../lib/settings'
+import { listPacks, deletePack, type OfflinePack } from '../lib/offline'
 import {
   ACCESSORIES,
   getRewards,
@@ -188,6 +189,24 @@ export default function Profile() {
     setSettings(next)
   }
 
+  const [offlinePacks, setOfflinePacks] = useState<OfflinePack[]>([])
+
+  useEffect(() => {
+    let active = true
+    void listPacks().then(list => { if (active) setOfflinePacks(list) }).catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  const handleDeletePack = async (key: string) => {
+    try {
+      await deletePack(key)
+      const next = await listPacks()
+      setOfflinePacks(next)
+    } catch {
+      /* ignore */
+    }
+  }
+
   const [adultUnlocked, setAdultUnlocked] = useState(false)
   const [holding, setHolding] = useState(false)
   const [holdProgress, setHoldProgress] = useState(0)
@@ -280,6 +299,14 @@ export default function Profile() {
                 <div className="pg-chips">{Array.from({ length: 10 }, (_, i) => i + 1).map(g => <Chip key={g} selected={g === p.grade} onClick={() => upd({ grade: g })}>{String(g)}</Chip>)}</div></div>
               <div className="pg-row"><span className="pg-label">Language</span>
                 <div className="pg-chips">{LANGUAGES.map(l => <Chip key={l.code} selected={l.code === p.language} onClick={() => upd({ language: l.code as LanguageCode })}>{l.label}</Chip>)}</div></div>
+              <div className="pg-row"><span className="pg-label">Teacher voice</span>
+                <div className="pg-chips" role="group" aria-label="Teacher voice">
+                  {(['default', 'young', 'older'] as const).map(style => (
+                    <Chip key={style} selected={(settings.voiceStyle || 'default') === style} onClick={() => updSettings({ voiceStyle: style })}>
+                      {style === 'default' ? 'Default' : style === 'young' ? 'Young' : 'Older'}
+                    </Chip>
+                  ))}
+                </div></div>
             </section>
 
             {/* Rewards Shop Grid */}
@@ -361,6 +388,54 @@ export default function Profile() {
             </SketchCard>
           </div>
         </div>
+
+        {/* Offline lessons */}
+        <section className="pf-offline-section">
+          <SketchCard>
+            <div className="pf-offline-head">
+              <h2 className="pg-h2" style={{ margin: 0 }}>Offline lessons</h2>
+              <span className="pg-label">{offlinePacks.length} saved</span>
+            </div>
+            {offlinePacks.length === 0 ? (
+              <p className="pf-offline-empty">
+                No offline lessons saved yet. Open any lesson and tap "Save for offline" to study without internet!
+              </p>
+            ) : (
+              <div className="pf-offline-list">
+                {offlinePacks.map(pack => {
+                  const openUrl = `${pack.url}${pack.url.includes('?') ? '&' : '?'}offline=1`
+                  const dateStr = pack.savedAt ? new Date(pack.savedAt).toLocaleDateString() : ''
+                  const stepsCount = pack.lesson?.steps?.length ? `${pack.lesson.steps.length} steps` : ''
+                  const meta = [dateStr, stepsCount].filter(Boolean).join(' · ')
+                  return (
+                    <div key={pack.key} className="pf-offline-item">
+                      <div className="pf-offline-info">
+                        <Link to={openUrl} className="pf-offline-title">
+                          {pack.title}
+                        </Link>
+                        {meta && <span className="pf-offline-meta">{meta}</span>}
+                      </div>
+                      <div className="pf-offline-actions">
+                        <Link to={openUrl}>
+                          <SketchButton variant="ghost" style={{ fontSize: '0.85rem', padding: '4px 10px' }}>
+                            Open
+                          </SketchButton>
+                        </Link>
+                        <SketchButton
+                          variant="ghost"
+                          style={{ fontSize: '0.85rem', padding: '4px 10px' }}
+                          onClick={() => handleDeletePack(pack.key)}
+                        >
+                          Delete
+                        </SketchButton>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </SketchCard>
+        </section>
 
         {/* Grown-ups Section with Parent Gate */}
         <section className="pf-grownups">
@@ -471,10 +546,39 @@ export default function Profile() {
                   )}
                 </div>
 
+                {/* Teacher voice */}
+                <div>
+                  <div className="pf-adult-sub">Teacher voice</div>
+                  <p className="pg-label" style={{ margin: '0 0 8px' }}>Choose the speaking style for lesson narration.</p>
+                  <div className="pg-chips" role="group" aria-label="Teacher voice">
+                    {(['default', 'young', 'older'] as const).map(style => (
+                      <Chip
+                        key={style}
+                        selected={(settings.voiceStyle || 'default') === style}
+                        onClick={() => updSettings({ voiceStyle: style })}
+                      >
+                        {style === 'default' ? 'Default' : style === 'young' ? 'Young (kids style)' : 'Older (narration)'}
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Accessibility Toggles */}
                 <div>
                   <div className="pf-adult-sub">Accessibility &amp; reading</div>
                   <div className="pf-toggles">
+                    <label className="pf-toggle">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settings.lowBandwidth)}
+                        onChange={e => updSettings({ lowBandwidth: e.target.checked })}
+                      />
+                      <div className="pf-toggle-info">
+                        <b>Low-bandwidth mode</b>
+                        <span>Uses device speech synthesis to save mobile data and skips prefetching.</span>
+                      </div>
+                    </label>
+
                     <label className="pf-toggle">
                       <input
                         type="checkbox"

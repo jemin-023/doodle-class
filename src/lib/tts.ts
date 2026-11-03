@@ -1,13 +1,24 @@
 import type { LanguageCode } from '../types'
 import { getActiveFamilyVoice } from './familyVoice'
+import { getSettings } from './settings'
 
-type Opts = { speaker: string; language: LanguageCode }
+export type Opts = { speaker: string; language: LanguageCode; style?: 'default' | 'young' | 'older' }
+
+export interface OfflineAudioClip {
+  chunks: string[]
+  mime: string
+}
 
 let muted = false
 let gen = 0                       // bumps on every stop; invalidates in-flight speak()
 let stopFns: Array<() => void> = []
 interface Clip { chunks: string[]; mime: string }
 const cache = new Map<string, Clip>()
+let offlineAudioMap: Record<string, OfflineAudioClip> = {}
+
+export function registerOfflineAudio(map: Record<string, OfflineAudioClip>): void {
+  offlineAudioMap = map ? { ...map } : {}
+}
 
 export function setMuted(m: boolean): void { muted = m; if (m) stopSpeaking() }
 export function isMuted(): boolean { return muted }
@@ -147,7 +158,7 @@ function browserSpeak(text: string, language: LanguageCode, myGen: number): Prom
 }
 
 const inflight = new Map<string, Promise<Clip | undefined>>()
-const keyOf = (text: string, o: Opts, vid: string) => `${text}|${o.speaker}|${o.language}|${vid}`
+const keyOf = (text: string, o: Opts, vid: string, style: string) => `${text}|${o.speaker}|${o.language}|${vid}|${style}`
 const toChunks = (a: unknown): string[] => Array.isArray(a) ? a : typeof a === 'string' ? [a] : []
 
 async function post(url: string, body: unknown, ms: number): Promise<Clip> {
@@ -160,9 +171,12 @@ async function post(url: string, body: unknown, ms: number): Promise<Clip> {
 }
 
 function getChunks(text: string, opts: Opts): Promise<Clip | undefined> {
+  const settings = getSettings()
+  if (settings.lowBandwidth) return Promise.resolve(undefined)
+  const style = opts.style || settings.voiceStyle || 'default'
   let fv = null as ReturnType<typeof getActiveFamilyVoice>
   try { fv = getActiveFamilyVoice() } catch { /* ignore */ }
-  const key = keyOf(text, opts, fv ? 'fv:' + fv.id : 'std')
+  const key = keyOf(text, opts, fv ? 'fv:' + fv.id : 'std', style)
   const hit = cache.get(key)
   if (hit) return Promise.resolve(hit)
   let p = inflight.get(key)
@@ -176,7 +190,7 @@ function getChunks(text: string, opts: Opts): Promise<Clip | undefined> {
           cache.set(key, c); return c
         } catch { /* fall back to the teacher voice for this sentence */ }
       }
-      const c = await post('/api/tts', { text, speaker: opts.speaker, language: opts.language }, 20000)
+      const c = await post('/api/tts', { text, speaker: opts.speaker, language: opts.language, style }, 20000)
       cache.set(key, c)
       return c
     } catch {
@@ -198,8 +212,34 @@ export async function speak(text: string, opts: Opts): Promise<void> {
 
   if (muted) return wait(Math.max(1500, text.length * 55), myGen)
 
+  // Check offline audio map first (matching full text or trimmed)
+  const offlineDirect = offlineAudioMap[text] || offlineAudioMap[text.trim()]
+  if (offlineDirect && offlineDirect.chunks?.length) {
+    await playClip(offlineDirect, myGen)
+    return
+  }
+
   const sentences = splitSentences(text)
-  const pending = sentences.map(s => getChunks(s, opts))   // all requested in parallel
+  const settings = getSettings()
+
+  // In low-bandwidth mode, skip /api/tts and use browser speech directly
+  if (settings.lowBandwidth) {
+    for (let i = 0; i < sentences.length; i++) {
+      const s = sentences[i]
+      const sClip = offlineAudioMap[s] || offlineAudioMap[s.trim()]
+      if (myGen !== gen) return
+      if (muted) return wait(Math.max(1500, text.length * 55), myGen)
+      if (sClip && sClip.chunks?.length) await playClip(sClip, myGen)
+      else await browserSpeak(s, opts.language, myGen)
+    }
+    return
+  }
+
+  const pending = sentences.map(s => {
+    const sClip = offlineAudioMap[s] || offlineAudioMap[s.trim()]
+    if (sClip && sClip.chunks?.length) return Promise.resolve(sClip)
+    return getChunks(s, opts)
+  })   // all requested in parallel
   for (let i = 0; i < sentences.length; i++) {
     const clip = await pending[i]
     if (myGen !== gen) return              // stopped or superseded while fetching
@@ -213,5 +253,7 @@ export async function speak(text: string, opts: Opts): Promise<void> {
 export function prefetchSpeech(text: string, opts: Opts): void {
   text = text.replace(/\*\*/g, "")
   if (!text || muted) return
+  const settings = getSettings()
+  if (settings.lowBandwidth) return
   splitSentences(text).forEach(s => { void getChunks(s, opts) })
 }

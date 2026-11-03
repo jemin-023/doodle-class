@@ -7,7 +7,9 @@ import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
 import { SketchButton, Icon, ProgressDots, TopBar, TextInput, Chip } from '../components/ui'
 import { streamLesson, askTeacher, generateQuiz } from '../lib/api'
-import { speak, stopSpeaking, setMuted, isMuted, prefetchSpeech } from '../lib/tts'
+import { speak, stopSpeaking, setMuted, isMuted, prefetchSpeech, registerOfflineAudio } from '../lib/tts'
+import { getPack, savePack, type OfflineAudioClip } from '../lib/offline'
+import { getSettings } from '../lib/settings'
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
 import { saveResume, clearResume, setSectionProgress } from '../lib/resume'
@@ -107,37 +109,75 @@ export default function Learn() {
   const [asking, setAsking] = useState(false)
   const [listenState, setListenState] = useState<ListenState>('idle')
   const lessonRef = useRef<Lesson | null>(null)
+  const [lowBandwidth] = useState(() => getSettings().lowBandwidth)
+  const [offlinePackSaved, setOfflinePackSaved] = useState(false)
+  const [savingOffline, setSavingOffline] = useState(false)
+  const [saveProgress, setSaveProgress] = useState<string | null>(null)
 
   useEffect(() => {
     if (fetched.current) return
     fetched.current = true
     const ac = new AbortController()
-    const handlers = {
-      signal: ac.signal,
-      onMeta: (m: { topic: string; subject: string }) => setLesson(l => l ?? { topic: m.topic, subject: m.subject, characterId, language: urlLang, steps: [] }),
-      onStep: (st: LessonStep, idx: number) => {
-        if (seen.current.has(idx)) return
-        seen.current.add(idx)
-        prefetchSpeech(st.say, { speaker: ch.speaker, language: urlLang })
-        setLesson(l => ({
-          topic: l?.topic ?? topic, subject: l?.subject ?? '', characterId, language: urlLang,
-          ...(l ?? {}), steps: [...(l?.steps ?? []), st],
-        }))
-      },
+
+    const start = async () => {
+      const isOfflineRequested = (typeof navigator !== 'undefined' && !navigator.onLine) || sp.get('offline') === '1'
+      const currentUrl = loc.pathname + loc.search
+
+      try {
+        const pack = await getPack(currentUrl)
+        if (pack) {
+          setOfflinePackSaved(true)
+          if (isOfflineRequested && pack.lesson && pack.lesson.steps?.length > 0) {
+            if (ac.signal.aborted) return
+            setLesson(pack.lesson)
+            registerOfflineAudio(pack.audio || {})
+            streamingRef.current = false
+            setStreaming(false)
+            return
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (!ac.signal.aborted) setError(true)
+        streamingRef.current = false
+        setStreaming(false)
+        return
+      }
+
+      const handlers = {
+        signal: ac.signal,
+        onMeta: (m: { topic: string; subject: string }) => setLesson(l => l ?? { topic: m.topic, subject: m.subject, characterId, language: urlLang, steps: [] }),
+        onStep: (st: LessonStep, idx: number) => {
+          if (seen.current.has(idx)) return
+          seen.current.add(idx)
+          if (!getSettings().lowBandwidth) {
+            prefetchSpeech(st.say, { speaker: ch.speaker, language: urlLang })
+          }
+          setLesson(l => ({
+            topic: l?.topic ?? topic, subject: l?.subject ?? '', characterId, language: urlLang,
+            ...(l ?? {}), steps: [...(l?.steps ?? []), st],
+          }))
+        },
+      }
+      const short = () => streamLesson({ topic, characterId, language: urlLang, grade, ...boardOpt, ...(source ? { source } : {}) }, handlers)
+      const run = ncert
+        ? Promise.resolve().then(() => streamDeepLesson({ ncert, characterId, language: urlLang, grade, ...boardOpt }, {
+            ...handlers,
+            onMeta: (m: DeepMeta) => { setDmeta(m); setOutline(m.outline ?? []); handlers.onMeta(m) },
+          })).then(() => { if (seen.current.size === 0) throw new Error('empty') })
+            .catch(() => { if (ac.signal.aborted || seen.current.size > 0) return; setOutline([]); setDmeta(null); return short().then(() => undefined) })
+        : short()
+      run
+        .catch(() => { if (!ac.signal.aborted && seen.current.size === 0) setError(true) })
+        .finally(() => { if (!ac.signal.aborted) { streamingRef.current = false; setStreaming(false) } })
     }
-    const short = () => streamLesson({ topic, characterId, language: urlLang, grade, ...boardOpt, ...(source ? { source } : {}) }, handlers)
-    const run = ncert
-      ? Promise.resolve().then(() => streamDeepLesson({ ncert, characterId, language: urlLang, grade, ...boardOpt }, {
-          ...handlers,
-          onMeta: (m: DeepMeta) => { setDmeta(m); setOutline(m.outline ?? []); handlers.onMeta(m) },
-        })).then(() => { if (seen.current.size === 0) throw new Error('empty') })
-          .catch(() => { if (ac.signal.aborted || seen.current.size > 0) return; setOutline([]); setDmeta(null); return short().then(() => undefined) })
-      : short()
-    run
-      .catch(() => { if (!ac.signal.aborted && seen.current.size === 0) setError(true) })
-      .finally(() => { if (!ac.signal.aborted) { streamingRef.current = false; setStreaming(false) } })
+
+    void start()
     return () => { ac.abort(); fetched.current = false; seen.current = new Set(); setLesson(null); setOutline([]); setCovered(new Set()); setDmeta(null) }
-  }, [topic, characterId, urlLang, grade, ncertFile, ncertSec, boardLang])
+  }, [topic, characterId, urlLang, grade, ncertFile, ncertSec, boardLang, loc.pathname, loc.search, sp])
 
   useEffect(() => () => { runId.current++; stopSpeaking(); stopListening() }, [])
   // Warm the quiz while the lesson plays, so "Test yourself" opens instantly (server caches + dedupes it).
@@ -148,7 +188,11 @@ export default function Learn() {
     void generateQuiz({ topic, language: boardLang ?? urlLang, grade, lesson, ...(ncert ? { ncert } : {}) }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming, lesson, source, topic, urlLang, grade])
-  useEffect(() => { prefetchSpeech(ACK, { speaker: ch.speaker, language: lang }) }, [ch.speaker, lang])
+  useEffect(() => {
+    if (!getSettings().lowBandwidth) {
+      prefetchSpeech(ACK, { speaker: ch.speaker, language: lang })
+    }
+  }, [ch.speaker, lang])
 
   const steps = lesson?.steps ?? []
   const last = steps.length - 1
@@ -353,7 +397,7 @@ export default function Learn() {
     let advanced = false
     setMood('talking')
     const nx = stepsRef.current[step + 1]
-    if (nx) prefetchSpeech(nx.say, { speaker: ch.speaker, language: lang })
+    if (nx && !getSettings().lowBandwidth) prefetchSpeech(nx.say, { speaker: ch.speaker, language: lang })
     const check = () => {
       if (id !== runId.current || advanced) return
       if (!spoken || writtenRef.current !== step) return
@@ -473,6 +517,62 @@ export default function Learn() {
     setNonce(n => n + 1)
   }
 
+  const handleSaveOffline = async () => {
+    if (!lesson || savingOffline || steps.length === 0) return
+    setSavingOffline(true)
+    setSaveProgress('0%')
+    try {
+      const audioMap: Record<string, OfflineAudioClip> = {}
+      const voiceStyle = getSettings().voiceStyle || 'default'
+
+      for (let i = 0; i < steps.length; i++) {
+        const pct = Math.round(((i + 1) / steps.length) * 100)
+        setSaveProgress(`${pct}%`)
+        const sayText = steps[i].say
+        if (!sayText || audioMap[sayText]) continue
+        try {
+          const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: sayText,
+              speaker: ch.speaker,
+              language: lang,
+              style: voiceStyle,
+            }),
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const chunks = Array.isArray(data.audio) ? data.audio : typeof data.audio === 'string' ? [data.audio] : []
+            audioMap[sayText] = {
+              chunks,
+              mime: typeof data.mime === 'string' ? data.mime : 'audio/mpeg',
+            }
+          }
+        } catch {
+          /* ignore single step failure, browser TTS fallback will handle playback */
+        }
+      }
+
+      const currentUrl = loc.pathname + loc.search
+      await savePack({
+        key: currentUrl,
+        url: currentUrl,
+        title: lesson.topic || topic,
+        lesson,
+        audio: audioMap,
+        savedAt: Date.now(),
+      })
+      registerOfflineAudio(audioMap)
+      setOfflinePackSaved(true)
+    } catch {
+      /* ignore */
+    } finally {
+      setSavingOffline(false)
+      setSaveProgress(null)
+    }
+  }
+
   const toQuiz = () =>
     nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${boardLang ?? lang}&grade=${grade}${ncert ? `&ncert=${ncert.file}${ncert.sec ? `&sec=${encodeURIComponent(ncert.sec)}` : ''}` : ''}`, { state: { lesson, source } })
 
@@ -495,14 +595,17 @@ export default function Learn() {
     <div className="pg-page">
       <DoodleScatter variant="page" />
       <TopBar>
-        <SketchButton variant="ghost" onClick={() => nav('/')}><Icon name="home" size={18} /> Home</SketchButton>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          {lowBandwidth && <span className="ln-low-data-badge">Low data</span>}
+          <SketchButton variant="ghost" onClick={() => nav('/')}><Icon name="home" size={18} /> Home</SketchButton>
+        </div>
       </TopBar>
       <main className="pg-wrap pg-learn">
-        <h2 className="pg-ltitle">{ch.name} is teaching: <span style={{ color: ch.color }}>{lesson?.topic || topic}</span></h2>
+        <h1 className="pg-ltitle">{ch.name} is teaching: <span style={{ color: ch.color }}>{lesson?.topic || topic}</span></h1>
         {srcLine && <p className="ol-src">{srcLine}</p>}
         {outline.length > 0 && <Outline variant="bar" outline={outline} covered={covered} onJump={jumpTo} />}
         <div className="pg-layout">
-          <div className="pg-board" ref={setInkHost}>
+          <div className="pg-board" ref={setInkHost} role="region" aria-label="Whiteboard">
             {thinking && (
               ncert ? (
                 <div className="pg-board-msg ln-loading-box">
@@ -603,6 +706,17 @@ export default function Learn() {
                 <div className="pg-extras">
                   {lesson && <LangSwitch lesson={lesson} current={lang} disabled={streaming} onSwitch={switchLanguage} {...boardOpt} />}
                   <ShareButton topic={lesson?.topic || topic} characterId={characterId} language={urlLang} grade={grade} />
+                  {!streaming && steps.length > 0 && (
+                    <SketchButton
+                      variant="ghost"
+                      disabled={savingOffline}
+                      onClick={handleSaveOffline}
+                      className="ln-offline-btn"
+                    >
+                      <Icon name={offlinePackSaved ? 'check' : 'book'} size={16} />
+                      {savingOffline ? `Saving ${saveProgress || ''}` : offlinePackSaved ? 'Saved offline ✓' : 'Save for offline'}
+                    </SketchButton>
+                  )}
                 </div>
                 {outline.length > 0 && <Outline variant="side" outline={outline} covered={covered} onJump={jumpTo} />}
                 {steps.length > 10
@@ -614,7 +728,7 @@ export default function Learn() {
                 )}
                 {askOpen && (
                   <div className="pg-ask">
-                    <TextInput value={question} disabled={asking} placeholder="What's confusing?"
+                    <TextInput value={question} disabled={asking} placeholder="What's confusing?" aria-label="What's confusing?"
                       onChange={e => setQuestion(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') doAsk() }} />
                     <div className="pg-ask-row">
                       {sttSupported() && (

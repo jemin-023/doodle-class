@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { TopBar, SketchButton, SketchCard, Chip, TextInput, Icon, Scribble, ProgressDots } from '../components/ui'
 import Character, { CharacterAvatar } from '../components/Characters/Character'
-import { CHARACTERS, getCharacter } from '../characters/registry'
+import { CHARACTERS, LANGUAGES, getCharacter } from '../characters/registry'
 import { speak, stopSpeaking } from '../lib/tts'
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
@@ -16,18 +16,6 @@ import { DoodleScatter } from '../components/Doodles/Doodles'
 import './pages.css'
 import './speak.css'
 
-interface PracticeLang {
-  code: LanguageCode
-  label: string
-}
-
-const SUPPORTED_LANGS: PracticeLang[] = [
-  { code: 'en-IN', label: 'English' },
-  { code: 'hi-IN', label: 'हिन्दी' },
-  { code: 'ta-IN', label: 'தமிழ்' },
-  { code: 'mr-IN', label: 'मराठी' },
-  { code: 'bn-IN', label: 'বাংলা' },
-]
 
 const BUILTIN_WORDS: Record<LanguageCode, string[]> = {
   'en-IN': ['butterfly', 'rainbow', 'pencil', 'sunshine', 'mountain', 'mango', 'elephant', 'friend', 'school', 'peacock'],
@@ -41,6 +29,8 @@ const BUILTIN_WORDS: Record<LanguageCode, string[]> = {
   'ml-IN': ['പുസ്തകം', 'സൂര്യൻ', 'കൂട്ടുകാരൻ', 'മയിൽ', 'മരം', 'സ്കൂൾ', 'വെള്ളം', 'നിറം', 'ആകാശം', 'നമസ്കാരം'],
   'od-IN': ['ବହି', 'ସୂର୍ଯ୍ୟ', 'ସାଙ୍ଗ', 'ମୟୂର', 'ଗଛ', 'ବିଦ୍ୟାଳୟ', 'ପାଣି', 'ରଙ୍ଗ', 'ଆକାଶ', 'ନମସ୍କାର'],
   'pa-IN': ['ਕਿਤਾਬ', 'ਸੂਰਜ', 'ਦੋਸਤ', 'ਮੋਰ', 'ਰੁੱਖ', 'ਸਕੂਲ', 'ਪਾਣੀ', 'ਰੰਗ', 'ਅਸਮਾਨ', 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ'],
+  'sa-IN': ['पुस्तकम्', 'सूर्यः', 'मित्रम्', 'मयूरः', 'वृक्षः', 'विद्यालयः', 'जलम्', 'पुष्पम्', 'आकाशः', 'नमस्ते'],
+  'ur-IN': ['کتاب', 'سورج', 'دوست', 'مور', 'درخت', 'اسکول', 'پانی', 'پھول', 'آسمان', 'آداب'],
 }
 
 const BUILTIN_SENTENCES: Record<LanguageCode, string[]> = {
@@ -90,6 +80,8 @@ const BUILTIN_SENTENCES: Record<LanguageCode, string[]> = {
   'ml-IN': ['സൂര്യൻ കിഴക്ക് ഉദിക്കുന്നു.', 'എനിക്ക് പുസ്തകം വായിക്കാൻ ഇഷ്ടമാണ്.'],
   'od-IN': ['ସୂର୍ଯ୍ୟ ପୂର୍ବ ଦିଗରେ ଉଦୟ ହୁଅନ୍ତି।', 'ମୋତେ ବହି ପଢ଼ିବା ଭଲ ଲାଗେ।'],
   'pa-IN': ['ਸੂਰਜ ਪੂਰਬ ਵੱਲ ਚੜ੍ਹਦਾ ਹੈ।', 'ਮੈਨੂੰ ਕਿਤਾਬਾਂ ਪੜ੍ਹਨਾ ਪਸੰਦ ਹੈ।'],
+  'sa-IN': ['सूर्यः पूर्वदिशि उदेति।', 'अहं पुस्तकं पठामि।'],
+  'ur-IN': ['سورج مشرق سے نکلتا ہے۔', 'مجھے کتابیں پڑھنا پسند ہے۔'],
 }
 
 function getLastLessonWords(): { title: string; words: string[] } | null {
@@ -281,7 +273,7 @@ function compareSentences(targetSentence: string, userSentence: string): Dictati
 
 export default function SpeakPractice() {
   const profile = useMemo(() => getProfile(), [])
-  const initialLang: LanguageCode = SUPPORTED_LANGS.some(l => l.code === profile.language)
+  const initialLang: LanguageCode = LANGUAGES.some(l => l.code === profile.language)
     ? profile.language
     : 'en-IN'
 
@@ -730,13 +722,18 @@ export default function SpeakPractice() {
           <div className="sp-config-row">
             <span className="sp-config-label">Language:</span>
             <div className="sp-chips-group">
-              {SUPPORTED_LANGS.map(l => (
+              {LANGUAGES.map(l => (
                 <Chip
                   key={l.code}
                   selected={selectedLang === l.code}
                   onClick={() => handleLangChange(l.code)}
                 >
                   {l.label}
+                  {(l.code === 'sa-IN' || l.code === 'ur-IN') && (
+                    <span style={{ display: 'block', fontSize: '0.68rem', lineHeight: 1, opacity: 0.8, marginTop: 2 }}>
+                      voice: browser
+                    </span>
+                  )}
                 </Chip>
               ))}
             </div>

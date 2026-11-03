@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import type { Notebook, StudioOutput } from '../../lib/notebook/types'
 import type { StudioTool } from './types'
 import { uid } from '../../lib/notebook/store'
@@ -17,6 +17,7 @@ const mods = import.meta.glob('./tools/*.tsx', { eager: true }) as Record<string
 export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProps) {
   const [activeTool, setActiveTool] = useState<StudioTool | null>(null)
   const [activeOutput, setActiveOutput] = useState<StudioOutput | undefined>(undefined)
+  const openerRef = useRef<HTMLElement | null>(null)
 
   const tools: StudioTool[] = useMemo(() => {
     return Object.values(mods)
@@ -26,6 +27,7 @@ export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProp
   }, [])
 
   const handleOpenTool = (tool: StudioTool, output?: StudioOutput) => {
+    openerRef.current = document.activeElement as HTMLElement | null
     setActiveTool(tool)
     setActiveOutput(output)
   }
@@ -33,7 +35,17 @@ export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProp
   const handleCloseModal = () => {
     setActiveTool(null)
     setActiveOutput(undefined)
+    openerRef.current?.focus()
   }
+
+  useEffect(() => {
+    if (!activeTool) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleCloseModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeTool])
 
   const handleSaveOutput = (o: Omit<StudioOutput, 'id' | 'at'>) => {
     const newOut: StudioOutput = {
@@ -138,6 +150,12 @@ export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProp
                       role="button"
                       tabIndex={0}
                       title={matchedTool ? 'Click to reopen' : undefined}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          if (matchedTool) handleOpenTool(matchedTool, out)
+                        }
+                      }}
                     >
                       <div className="nb-output-item-title">{out.title}</div>
                       <div className="nb-output-item-meta">
@@ -151,6 +169,7 @@ export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProp
                           type="button"
                           className="nb-icon-btn"
                           title="Reopen output"
+                          aria-label={`Reopen ${out.title}`}
                           onClick={() => handleOpenTool(matchedTool, out)}
                         >
                           <Icon name="replay" size={14} />
@@ -160,6 +179,7 @@ export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProp
                         type="button"
                         className="nb-icon-btn is-danger"
                         title="Delete output"
+                        aria-label={`Delete ${out.title}`}
                         onClick={() => handleDeleteOutput(out.id)}
                       >
                         <Icon name="cross" size={14} />
@@ -179,10 +199,21 @@ export default function Studio({ notebook, onUpdateNotebook, onAsk }: StudioProp
       {/* Tool Modal / Sheet */}
       {activeTool && (
         <div className="nb-modal-backdrop" onClick={handleCloseModal}>
-          <div className="nb-modal-card nb-modal-large" onClick={e => e.stopPropagation()}>
+          <div
+            className="nb-modal-card nb-modal-large"
+            role="dialog"
+            aria-modal="true"
+            aria-label={activeTool.title}
+            onClick={e => e.stopPropagation()}
+          >
             <div className="nb-modal-head">
               <h3>{activeTool.title}</h3>
-              <button type="button" className="nb-icon-btn" onClick={handleCloseModal}>
+              <button
+                type="button"
+                className="nb-icon-btn"
+                aria-label="Close"
+                onClick={handleCloseModal}
+              >
                 <Icon name="cross" size={18} />
               </button>
             </div>

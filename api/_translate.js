@@ -5,7 +5,7 @@ import { chat, extractJSON, parseBody, cleanLang, rejectNonPost, hasKey, LANG_NA
 const SEP = '\n§§\n'
 const MAX_GROUP = 850      // mayura input limit is 1000 chars
 const MAX_PAR = 5
-const SKIP = new Set(['equation'])
+const SKIP = new Set(['equation', 'reaction'])
 
 /* ---------- placeholders: protect $math$ and **bold** ---------- */
 function getShortBoldInfo(s) {
