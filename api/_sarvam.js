@@ -50,6 +50,20 @@ export async function chat(messages, { temperature = 0.4, max_tokens = 4000 } = 
   return j?.choices?.[0]?.message?.content ?? ''
 }
 
+
+/** LLMs often emit LaTeX with single backslashes inside JSON ("\frac"), which JSON.parse
+ *  turns into control chars (\f -> form feed). Double any lone backslash before a letter
+ *  that isn't a real JSON escape we want to keep (\n newline, \" quote, \u unicode, \/). */
+export function fixLatexEscapes(raw) {
+  return String(raw).replace(/\\\\|\\(?=[a-zA-Z])/g, (m, off, str) => {
+    if (m === '\\\\') return m
+    const rest = str.slice(off + 1)
+    if (/^u[0-9a-fA-F]{4}/.test(rest)) return m
+    if (/^n(?![a-zA-Z])/.test(rest)) return m
+    return '\\\\'
+  })
+}
+
 export function extractJSON(text) {
   let t = String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*$/i, '')
   t = t.replace(/```(?:json)?/gi, '')
@@ -61,7 +75,7 @@ export function extractJSON(text) {
     if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue }
     if (c === '"') inStr = true
     else if (c === '{') depth++
-    else if (c === '}') { depth--; if (depth === 0) return JSON.parse(t.slice(start, i + 1)) }
+    else if (c === '}') { depth--; if (depth === 0) return JSON.parse(fixLatexEscapes(t.slice(start, i + 1))) }
   }
   throw new Error('unterminated JSON')
 }

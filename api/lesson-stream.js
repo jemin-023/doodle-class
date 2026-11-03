@@ -1,4 +1,4 @@
-import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS , cleanLang, cleanGrade, cleanTopic, rejectNonPost } from './_sarvam.js'
+import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS , cleanLang, cleanGrade, cleanTopic, rejectNonPost, fixLatexEscapes } from './_sarvam.js'
 import { SAMPLE_LESSONS } from './_samples.js'
 
 function pickSample(topic, characterId) {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   const handleLine = line => {
     line = line.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
     if (!line.startsWith('{')) return
-    let o; try { o = JSON.parse(line) } catch { return }
+    let o; try { o = JSON.parse(fixLatexEscapes(line)) } catch { return }
     if (o.type === 'meta' && !metaSent) {
       metaSent = true
       send({ type: 'meta', topic: String(o.topic || request.topic), subject: String(o.subject || 'General') })

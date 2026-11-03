@@ -226,7 +226,11 @@ function plainToTex(t: string): string {
     .replace(/\*/g, '\\times ')
     .replace(/(?<![\\a-zA-Z{])([A-Za-z]{2,})(?![a-zA-Z}])/g, (w) => (w === 'frac' || w === 'times' || w === 'sqrt' ? w : '\\text{' + w + '}'))
 }
+function fixCtl(t: string): string {
+  return t.replace(/\f/g, '\\f').replace(/\t/g, '\\t').replace(/\x08/g, '\\b').replace(/\r/g, '\\r').replace(/\v/g, '\\v')
+}
 function eqToHtml(raw: string): string {
+  raw = fixCtl(raw)
   let src = raw
   try { src = stripWrap(raw) } catch { /* use raw */ }
   const lines = src.split(/\\\\|\n| ; /).map(l => stripWrap(l).trim()).filter(Boolean).map(plainToTex)
@@ -241,6 +245,7 @@ function eqToHtml(raw: string): string {
   return lines.map(r).join('')
 }
 function inlineMath(raw: string): ReactNode[] {
+  raw = fixCtl(raw)
   return raw.split(/(\$[^$]+\$)/).filter(Boolean).map((part, i) => {
     if (/^\$[^$]+\$$/.test(part)) {
       try {
