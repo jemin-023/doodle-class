@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CHARACTERS, LANGUAGES } from '../characters/registry'
 import { CharacterAvatar } from '../components/Characters/Character'
-import { TopBar, Chip, TextInput, SketchCard } from '../components/ui'
+import { TopBar, Chip, TextInput, SketchCard, SketchButton } from '../components/ui'
 import { getLevel, getXP, getBook, isBossDefeated, getCustomBook } from '../lib/journey'
 import { getTotalStars, getStreak, getMastery, getHistory } from '../lib/progress'
 import { rememberedCount } from '../lib/memory'
 import { getProfile, saveProfile, type Profile as P } from '../lib/profile'
+import { seedDemoData } from '../lib/demo'
 import type { LanguageCode } from '../types'
 import './pages.css'
 import './profile.css'
@@ -89,7 +90,12 @@ export default function Profile() {
             </SketchCard>
           </div>
         </div>
-        <p style={{ marginTop: 32 }}><Link to="/">← Back home</Link></p>
+        <div style={{ marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <Link to="/">← Back home</Link>
+          <SketchButton variant="ghost" style={{ fontSize: '0.95rem', padding: '6px 14px' }} onClick={() => { seedDemoData(); window.location.reload() }}>
+            Load demo data
+          </SketchButton>
+        </div>
       </main>
     </div>
   )

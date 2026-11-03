@@ -1,0 +1,234 @@
+/* Styling for /about (Work order J3, J4) — Sketchbook theme */
+.ab-wrap {
+  max-width: 960px;
+  margin: var(--sp-3) auto var(--sp-5);
+}
+
+.ab-hero {
+  margin-bottom: var(--sp-4);
+}
+
+.ab-hero h1 {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  margin-bottom: var(--sp-2);
+}
+
+.ab-pitch-card {
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  padding: var(--sp-3) var(--sp-4);
+  margin: var(--sp-3) 0 var(--sp-4);
+  box-shadow: var(--shadow);
+  transform: rotate(-0.4deg);
+  position: relative;
+}
+
+.ab-pitch-card::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 28px;
+  width: 70px;
+  height: 20px;
+  background: var(--tape);
+  transform: rotate(-2deg);
+}
+
+.ab-pitch-text {
+  font-family: var(--font-hand);
+  font-size: clamp(1.6rem, 4vw, 2.3rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 0;
+}
+
+.ab-sub {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: var(--sp-2) 0 0;
+}
+
+/* By the numbers */
+.ab-section {
+  margin-top: var(--sp-5);
+}
+
+.ab-section-title {
+  display: inline-block;
+  font-family: var(--font-hand);
+  font-size: 2.2rem;
+  margin-bottom: var(--sp-3);
+  border-bottom: 3px solid var(--marker-blue);
+  padding-bottom: 2px;
+}
+
+.ab-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: var(--sp-4);
+}
+
+.ab-stat-tile {
+  background: var(--board);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.15s ease;
+}
+
+.ab-stat-tile:hover {
+  transform: translateY(-2px);
+}
+
+.ab-stat-num {
+  font-family: var(--font-hand);
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ab-stat-label {
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ab-stat-desc {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* Models Grid */
+.ab-models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: var(--sp-3);
+}
+
+.ab-model-card {
+  padding: 18px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-model-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ab-model-name {
+  font-family: var(--font-hand);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.ab-tag {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-2);
+}
+
+.ab-model-role {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--marker-blue);
+  margin: 0;
+}
+
+.ab-model-desc {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* Safety Section */
+.ab-safety-box {
+  background: var(--board);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-top: var(--sp-3);
+  position: relative;
+}
+
+.ab-safety-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-top: var(--sp-3);
+}
+
+.ab-safety-item h3 {
+  font-size: 1.4rem;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.ab-safety-item p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* Back Link & Actions */
+.ab-footer {
+  margin-top: var(--sp-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: var(--sp-3);
+  border-top: 1px dashed var(--ink-faint);
+}
+
+.ab-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  text-decoration: none;
+  min-height: 44px;
+}
+
+.ab-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .ab-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .ab-models-grid {
+    grid-template-columns: 1fr;
+  }
+  .ab-safety-grid {
+    grid-template-columns: 1fr;
+  }
+}
