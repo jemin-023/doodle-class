@@ -54,6 +54,26 @@ ${JSON.stringify({ questions: quiz.questions })}` },
 }
 const inflight = new Map()
 
+/** NCERT grounding: the section's (or chapter's) book text plus one worked example, or '' if the book cannot be loaded. */
+async function ncertContext(ref) {
+  try {
+    const file = String(ref?.file || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 24)
+    if (!file) return ''
+    let ch
+    try { ch = await (await import('./_ncert.js')).getChapter(file) } catch (e) {
+      if (!process.env.DC_DEEP_FIXTURE) throw e
+      ch = JSON.parse((await import('node:fs')).readFileSync(process.env.DC_DEEP_FIXTURE, 'utf8'))
+    }
+    const secs = Array.isArray(ch.sections) ? ch.sections : []
+    const one = ref.sec ? secs.find(x => String(x.id) === String(ref.sec)) : null
+    const parts = one ? [one] : secs
+    const text = parts.map(x => x.text || '').join('\n').replace(/\s+/g, ' ').trim().slice(0, 6000)
+    const ex = parts.flatMap(x => x.examples || [])[0]
+    if (!text) return ''
+    return `Base the questions ONLY on this text from the student's NCERT textbook ("${ch.title || ''}"):\n\"\"\"\n${text}\n\"\"\"\n${ex ? `At least one question must be built on this worked example from the book (same method, can change the numbers):\n${String(ex.title || '')} ${String(ex.text || '').slice(0, 1200)}\n` : ''}`
+  } catch (e) { console.warn('[quiz] ncert context unavailable:', e.message || e); return '' }
+}
+
 export default async function handler(req, res) {
   if (rejectNonPost(req, res)) return
   const body = parseBody(req)
@@ -61,7 +81,8 @@ export default async function handler(req, res) {
   const noCache = !!String(body.source || '').trim()
   const t0 = Date.now()
   // the quiz is cached per topic only when it is not tied to a particular (possibly edited/translated) lesson body
-  const ckey = { ...request, characterId: 'quiz' }
+  const ncert = body.ncert && body.ncert.file ? { file: String(body.ncert.file), sec: body.ncert.sec ? String(body.ncert.sec) : undefined } : null
+  const ckey = { ...request, characterId: 'quiz', ...(ncert ? { topic: `${request.topic}|ncert:${ncert.file}:${ncert.sec || '*'}` } : {}) }
   try {
     const verdict = checkSafe(request.topic, request.language)
     const early = await Promise.race([verdict, new Promise(r => setTimeout(() => r(null), 5))])
@@ -74,15 +95,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ ...hit, language: request.language, cached: true })
     }
     const lang = LANG_NAMES[request.language] || 'English'
-    const ctx = request.lesson?.steps
+    const bookCtx = ncert ? await ncertContext(ncert) : ''
+    const ctx = bookCtx || (request.lesson?.steps
       ? `Base the questions on this lesson:\n${request.lesson.steps.map(s => `- ${s.say}`).join('\n').slice(0, 3000)}`
-      : ''
+      : '')
     const user = `Make a 5-question quiz on "${request.topic}" for a grade ${request.grade} student. ${ctx}
 Write prompts, options and explanations in ${lang}. Reply with ONE JSON object only:
 {"questions":[{"type":"mcq"|"truefalse"|"fill","prompt":string,"options"?:string[],"answer":string,"explanation":string}]}
 Rules: exactly 5 questions, a mix of types (at least 2 mcq, 1 truefalse, 1 fill). mcq has exactly 4 options and "answer" must be copied exactly from the options. truefalse has options ["True","False"] and answer "True" or "False" (keep these two words in English). fill has no options; answer is ONE word or number. Explanation is one short friendly sentence.`
     // dedupe: Learn prefetches the quiz while the lesson plays; the Quiz page may ask while that is in flight
-    const fkey = noCache ? null : JSON.stringify([request.topic.toLowerCase(), request.language, request.grade])
+    const fkey = noCache ? null : JSON.stringify([request.topic.toLowerCase(), request.language, request.grade, ncert?.file || '', ncert?.sec || ''])
     let job = fkey ? inflight.get(fkey) : null
     if (!job) {
       job = (async () => {
