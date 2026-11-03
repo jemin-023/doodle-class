@@ -34,6 +34,7 @@ function loadPrefs(): { c: string; l: LanguageCode; g: number } {
 
 const MENU: { label: string; sub: string; to: string; doodle: DoodleName; color?: string; free?: boolean }[] = [
   { label: 'Learn from my book', sub: 'NCERT, chapter by chapter', to: '/study', doodle: 'book', color: 'var(--marker-green)' },
+  { label: 'Study notebook', sub: 'Chat with your books and notes', to: '/notebooks', doodle: 'plane', color: 'var(--marker-blue)' },
   { label: 'Learn anything', sub: 'Pick a topic, any topic', to: '/#learn-anything', doodle: 'bulb', free: true },
   { label: 'Test myself', sub: 'A quick quiz on my book', to: '/study?mode=test', doodle: 'ruler', color: 'var(--marker-red)' },
   { label: 'Talk to a teacher', sub: 'Ask out loud', to: '/talk/:t', doodle: 'cloud' },
