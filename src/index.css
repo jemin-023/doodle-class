@@ -82,3 +82,4 @@ body::before {
 .dc-sarvam:hover { transform: rotate(0) translateY(-2px); }
 .dc-sarvam svg { flex: none; }
 @media (max-width: 520px) { .dc-sarvam { font-size: 1rem; right: 8px; bottom: 8px; padding: 4px 10px; } }
+body { padding-bottom: 56px; } /* room to scroll content clear of the fixed badge */

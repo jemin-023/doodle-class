@@ -117,3 +117,7 @@
 @keyframes pg-wave { 0%,100% { rotate: 0deg } 25% { rotate: -6deg } 75% { rotate: 6deg } }
 .pg-teacher:hover .pg-teacher-in svg, .pg-teacher.is-sel .pg-teacher-in svg { transform-origin: 50% 90%; animation: pg-wave 1.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .pg-scribble { animation: none; clip-path: none; } .pg-teacher .pg-teacher-in svg { animation: none !important; } }
+
+/* Round 3: slot for language switch + share in the Learn sidebar */
+.pg-extras { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+.pg-extras:empty { display: none; }

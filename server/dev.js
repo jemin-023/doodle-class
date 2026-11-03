@@ -15,17 +15,26 @@ try {
 } catch {}
 
 const PORT = Number(process.env.PORT) || 8787
-const routes = { '/api/lesson': 'lesson.js', '/api/quiz': 'quiz.js', '/api/tts': 'tts.js', '/api/lesson-stream': 'lesson-stream.js', '/api/ask': 'ask.js', '/api/stt': 'stt.js', '/api/syllabus': 'syllabus.js', '/api/coach': 'coach.js', '/api/chat': 'chat.js' }
+// /api/<name> -> api/<name>.js (not files starting with _); /api/v2/<fn> -> api/v2/[fn].js with req.query.fn
+function resolveRoute(p) {
+  const v2 = p.match(/^\/api\/v2\/([a-z0-9-]+)$/i)
+  if (v2) return { file: 'v2/[fn].js', query: { fn: v2[1] } }
+  const m = p.match(/^\/api\/([a-z0-9-]+)$/i)
+  if (m && !m[1].startsWith('_') && fs.existsSync(path.join(root, 'api', m[1] + '.js'))) return { file: m[1] + '.js', query: {} }
+  return null
+}
 
 http.createServer(async (req, res) => {
   const t0 = Date.now()
   const url = new URL(req.url, 'http://localhost')
   res.status = code => { res.statusCode = code; return res }
-  res.json = obj => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(obj)) }
+  res.json = obj => { if (!res.getHeader('Content-Type')) res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(obj)) }
   res.on('finish', () => console.log(`${req.method} ${url.pathname} ${res.statusCode} ${Date.now() - t0}ms`))
   try {
-    const file = routes[url.pathname]
-    if (!file) return res.status(404).json({ error: 'not found' })
+    const route = resolveRoute(url.pathname)
+    if (!route) return res.status(404).json({ error: 'not found' })
+    const file = route.file
+    req.query = { ...Object.fromEntries(url.searchParams), ...route.query }
     const chunks = []
     for await (const c of req) chunks.push(c)
     const raw = Buffer.concat(chunks).toString('utf8')

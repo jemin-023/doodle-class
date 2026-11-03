@@ -129,6 +129,11 @@ export default function Home() {
           <Link to="/progress">Progress</Link>
           <Link to="/profile">Profile</Link>
           <Link to="/syllabus">Upload syllabus</Link>
+          <Link to="/snap">Snap your textbook</Link>
+          <Link to="/family-voice">Family voice</Link>
+          <Link to="/class">Classroom</Link>
+          <Link to="/join">Join a class</Link>
+          <Link to="/parent">Parent report</Link>
         </nav>
 
         {history.length > 0 && (

@@ -9,6 +9,12 @@ import Syllabus from './pages/Syllabus'
 import Profile from './pages/Profile'
 import Talk from './pages/Talk'
 import QuickQuiz from './pages/QuickQuiz'
+import Snap from './pages/Snap'
+import FamilyVoice from './pages/FamilyVoice'
+import ParentReport from './pages/ParentReport'
+import ClassHost from './pages/ClassHost'
+import ClassJoin from './pages/ClassJoin'
+import DevDiagrams from './pages/DevDiagrams'
 export default function App() {
   return (
     <>
@@ -23,6 +29,14 @@ export default function App() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/practice" element={<QuickQuiz />} />
       <Route path="/talk/:characterId" element={<Talk />} />
+      <Route path="/snap" element={<Snap />} />
+      <Route path="/family-voice" element={<FamilyVoice />} />
+      <Route path="/parent" element={<ParentReport />} />
+      <Route path="/class" element={<ClassHost />} />
+      <Route path="/class/:code" element={<ClassHost />} />
+      <Route path="/join" element={<ClassJoin />} />
+      <Route path="/join/:code" element={<ClassJoin />} />
+      {import.meta.env.DEV && <Route path="/dev/diagrams" element={<DevDiagrams />} />}
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <a className="dc-sarvam" href="https://www.sarvam.ai" target="_blank" rel="noreferrer" aria-label="Made with Sarvam AI">

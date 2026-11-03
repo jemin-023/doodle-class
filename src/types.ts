@@ -1,5 +1,5 @@
 // SHARED CONTRACT — owned by lead. Do NOT change shapes without telling the lead.
-export type LanguageCode = 'en-IN' | 'hi-IN' | 'ta-IN' | 'te-IN' | 'kn-IN' | 'mr-IN' | 'bn-IN' | 'gu-IN'
+export type LanguageCode = 'en-IN' | 'hi-IN' | 'ta-IN' | 'te-IN' | 'kn-IN' | 'mr-IN' | 'bn-IN' | 'gu-IN' | 'ml-IN' | 'od-IN' | 'pa-IN'
 export type Mood = 'idle' | 'talking' | 'happy' | 'sad' | 'thinking'
 
 export type BoardItem =
@@ -10,6 +10,12 @@ export type BoardItem =
   | { kind: 'highlight'; text: string }       // boxed "key idea"
   | { kind: 'example'; text: string }
   | { kind: 'drawing'; shape: 'circle' | 'arrow' | 'box' | 'star' | 'underline' | 'divider'; label?: string }
+  // ---- Round 3 rich visuals (rendered by Whiteboard lane) ----
+  | { kind: 'numberline'; from: number; to: number; marks?: number[]; label?: string }   // marks = points to dot/hop to
+  | { kind: 'fraction'; num: number; den: number; label?: string }                       // shaded pie / bar
+  | { kind: 'chart'; chart: 'bar' | 'line'; labels: string[]; values: number[]; title?: string }
+  | { kind: 'table'; rows: string[][] }                                                  // rows[0] = header row
+  | { kind: 'diagram'; name: string; labels?: string[]; title?: string }                 // name = id from the doodle diagram library (see api/_board.js DIAGRAMS)
 
 export interface LessonStep {
   say: string            // what the character narrates (spoken via TTS)
@@ -49,5 +55,9 @@ export interface CharacterInfo {
   speaker: string        // Sarvam bulbul speaker id
 }
 
-export interface LessonRequest { topic: string; characterId: string; language: LanguageCode; grade: number }
-export interface QuizRequest { topic: string; language: LanguageCode; grade: number; lesson?: Lesson }
+export interface LessonRequest {
+  topic: string; characterId: string; language: LanguageCode; grade: number
+  /** Optional source text (e.g. OCR of a textbook page) the lesson must be grounded in. <= 6000 chars. Never cached. */
+  source?: string
+}
+export interface QuizRequest { topic: string; language: LanguageCode; grade: number; lesson?: Lesson; source?: string }
