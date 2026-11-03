@@ -1,0 +1,150 @@
+/* Home motivation row: Continue, Streak, Weekly Goal */
+
+.hm-motivation {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 0 0 36px;
+}
+
+@media (min-width: 700px) {
+  .hm-motivation {
+    gap: 18px;
+  }
+  .hm-motivation.hm-has-resume {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .hm-motivation.hm-no-resume {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.hm-mot-link,
+.hm-mot-item,
+.hm-mot-btn {
+  display: block;
+  text-decoration: none;
+  color: var(--ink);
+  min-height: 44px;
+}
+
+.hm-mot-btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hm-mot-link:focus-visible,
+.hm-mot-btn:focus-visible {
+  outline: none;
+}
+
+.hm-mot-link:hover .ui-card,
+.hm-mot-link:focus-visible .ui-card,
+.hm-mot-btn:hover .ui-card,
+.hm-mot-btn:focus-visible .ui-card {
+  background: var(--highlight);
+}
+
+.hm-mot-card {
+  height: 100%;
+}
+
+.hm-mot-card .ui-card-body {
+  height: 100%;
+}
+
+.hm-mot-in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  min-height: 56px;
+}
+
+.hm-mot-icon-wrap {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.hm-mot-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hm-mot-badge {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  line-height: 1;
+}
+
+.hm-mot-title {
+  font-family: var(--font-hand);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hm-mot-sub {
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  line-height: 1.25;
+  margin: 0;
+}
+
+/* Flame doodle SVG */
+.hm-flame {
+  display: block;
+}
+
+/* Weekly goal rough progress ring */
+.hm-goal-ring-wrap {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+}
+
+.hm-goal-ring {
+  display: block;
+}
+
+.hm-goal-ring-prog {
+  transition: stroke-dashoffset 0.35s ease;
+}
+
+.hm-goal-num {
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-goal-ring-prog {
+    transition: none;
+  }
+}
