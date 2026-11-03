@@ -1,5 +1,5 @@
 // SHARED CONTRACT — owned by lead. Do NOT change shapes without telling the lead.
-export type LanguageCode = 'en-IN' | 'hi-IN' | 'ta-IN' | 'te-IN' | 'kn-IN' | 'mr-IN' | 'bn-IN' | 'gu-IN' | 'ml-IN' | 'od-IN' | 'pa-IN'
+export type LanguageCode = 'en-IN' | 'hi-IN' | 'ta-IN' | 'te-IN' | 'kn-IN' | 'mr-IN' | 'bn-IN' | 'gu-IN' | 'ml-IN' | 'od-IN' | 'pa-IN' | 'sa-IN' | 'ur-IN'
 export type Mood = 'idle' | 'talking' | 'happy' | 'sad' | 'thinking'
 
 export type BoardItem =
@@ -16,6 +16,7 @@ export type BoardItem =
   | { kind: 'chart'; chart: 'bar' | 'line'; labels: string[]; values: number[]; title?: string }
   | { kind: 'table'; rows: string[][] }                                                  // rows[0] = header row
   | { kind: 'diagram'; name: string; labels?: string[]; title?: string }                 // name = id from the doodle diagram library (see api/_board.js DIAGRAMS)
+  | { kind: 'reaction'; left: { formula: string; count: number }[]; right: { formula: string; count: number }[]; label?: string }
 
 export interface LessonStep {
   say: string            // what the character narrates (spoken via TTS)

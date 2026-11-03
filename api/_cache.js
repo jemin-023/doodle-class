@@ -21,7 +21,7 @@ export async function cachePut(kind, req, value) {
 }
 
 // Unicode block per language; used to refuse caching a lesson the model wrote in the wrong language.
-const SCRIPT = { 'hi-IN': /[ऀ-ॿ]/g, 'mr-IN': /[ऀ-ॿ]/g, 'bn-IN': /[ঀ-৿]/g, 'pa-IN': /[਀-੿]/g, 'gu-IN': /[઀-૿]/g, 'od-IN': /[଀-୿]/g, 'ta-IN': /[஀-௿]/g, 'te-IN': /[ఀ-౿]/g, 'kn-IN': /[ಀ-೿]/g, 'ml-IN': /[ഀ-ൿ]/g }
+const SCRIPT = { 'hi-IN': /[ऀ-ॿ]/g, 'mr-IN': /[ऀ-ॿ]/g, 'bn-IN': /[ঀ-৿]/g, 'pa-IN': /[਀-੿]/g, 'gu-IN': /[઀-૿]/g, 'od-IN': /[଀-୿]/g, 'ta-IN': /[஀-௿]/g, 'te-IN': /[ఀ-౿]/g, 'kn-IN': /[ಀ-೿]/g, 'ml-IN': /[ഀ-ൿ]/g, 'sa-IN': /[\u0900-\u097F]/g, 'ur-IN': /[\u0600-\u06FF]/g }
 /** True when the spoken text is mostly in the requested language's script (always true for English). */
 export function inLanguage(texts, language, min = 0.5) {
   const re = SCRIPT[language]

@@ -15,4 +15,5 @@ export const LANGUAGES: { code: import('../types').LanguageCode; label: string }
   { code: 'te-IN', label: 'తెలుగు' }, { code: 'kn-IN', label: 'ಕನ್ನಡ' }, { code: 'mr-IN', label: 'मराठी' },
   { code: 'bn-IN', label: 'বাংলা' }, { code: 'gu-IN', label: 'ગુજરાતી' },
   { code: 'ml-IN', label: 'മലയാളം' }, { code: 'od-IN', label: 'ଓଡ଼ିଆ' }, { code: 'pa-IN', label: 'ਪੰਜਾਬੀ' },
+  { code: 'sa-IN', label: 'संस्कृतम्' }, { code: 'ur-IN', label: 'اردو' },
 ]

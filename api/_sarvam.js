@@ -9,7 +9,7 @@ export function parseBody(req) {
   return b && typeof b === 'object' ? b : {}
 }
 
-const LANGS = ['en-IN', 'hi-IN', 'ta-IN', 'te-IN', 'kn-IN', 'mr-IN', 'bn-IN', 'gu-IN', 'ml-IN', 'od-IN', 'pa-IN']
+const LANGS = ['en-IN', 'hi-IN', 'ta-IN', 'te-IN', 'kn-IN', 'mr-IN', 'bn-IN', 'gu-IN', 'ml-IN', 'od-IN', 'pa-IN', 'sa-IN', 'ur-IN']
 export function cleanLang(l) { return LANGS.includes(l) ? l : 'en-IN' }
 /** Board (written) language: English-medium kids often listen in Hindi but write in English. Defaults to the spoken language. */
 export function boardLangOf(body, language) { const b = body?.boardLanguage; return LANGS.includes(b) ? b : language }
@@ -119,9 +119,33 @@ const V4 = {
   'pa-IN': { tara: null, bolt: 'anand_pa_conversation', mishri: null, gajju: null },
 }
 const CHAR_PACE = { tara: 1.0, bolt: 1.15, mishri: 1.1, gajju: 0.92 }
-export function voiceFor(speaker, language) {
+
+const V4_YOUNG = {
+  'hi-IN': { tara: 'chhavi_hi_kids', bolt: 'kunal_hi_kids', mishri: 'chhavi_hi_kids', gajju: 'kunal_hi_kids', _def: 'chhavi_hi_kids' },
+  'en-IN': { tara: 'nupur_en_kids', bolt: 'nupur_en_kids', mishri: 'nupur_en_kids', gajju: 'nupur_en_kids', _def: 'nupur_en_kids' },
+  'mr-IN': { tara: 'rupali_mr_stories', bolt: 'mukul_mr_stories', mishri: 'rupali_mr_stories', gajju: 'mukul_mr_stories', _def: 'rupali_mr_stories' },
+}
+
+const V4_OLDER = {
+  'hi-IN': { tara: 'ishita_hi_edtech', bolt: 'mahesh_hi_documentary', mishri: 'ishita_hi_edtech', gajju: 'mahesh_hi_documentary', _def: 'mahesh_hi_documentary' },
+  'en-IN': { tara: 'aparna_en_edtech', bolt: 'girish_en_documentary', mishri: 'aparna_en_edtech', gajju: 'girish_en_documentary', _def: 'girish_en_documentary' },
+  'mr-IN': { tara: 'neha_mr_narration', bolt: 'soham_mr_narration', mishri: 'neha_mr_narration', gajju: 'soham_mr_narration', _def: 'neha_mr_narration' },
+  'kn-IN': { tara: 'suchitra_kn_narration', bolt: 'suchitra_kn_narration', mishri: 'suchitra_kn_narration', gajju: 'suchitra_kn_narration', _def: 'suchitra_kn_narration' },
+  'ta-IN': { tara: 'vijay_ta_narration', bolt: 'vijay_ta_narration', mishri: 'vijay_ta_narration', gajju: 'vijay_ta_narration', _def: 'vijay_ta_narration' },
+  'te-IN': { tara: 'tarun_te_narration', bolt: 'tarun_te_narration', mishri: 'tarun_te_narration', gajju: 'tarun_te_narration', _def: 'tarun_te_narration' },
+}
+
+export function voiceFor(speaker, language, style = 'default') {
   const ch = SPK_CHAR[speaker]
-  const v4 = ch ? V4[language]?.[ch] : null
+  let v4 = null
+  if (style === 'young') {
+    v4 = (ch && V4_YOUNG[language]?.[ch]) || V4_YOUNG[language]?._def || null
+  } else if (style === 'older') {
+    v4 = (ch && V4_OLDER[language]?.[ch]) || V4_OLDER[language]?._def || null
+  }
+  if (!v4 && ch) {
+    v4 = V4[language]?.[ch] || null
+  }
   return { model: v4 ? 'bulbul:v4-flash' : 'bulbul:v3', speaker: v4 || speaker, pace: (ch && CHAR_PACE[ch]) || 1.1, v3speaker: speaker }
 }
 
@@ -143,12 +167,14 @@ async function ttsOne(text, v, language, key) {
   return j.audios[0]
 }
 
-export async function tts(text, speaker = 'priya', language = 'en-IN') {
+export async function tts(text, speaker = 'priya', language = 'en-IN', style = 'default') {
+  // Bulbul has no Sanskrit/Urdu voices: fail fast so the client uses the browser's speech instead
+  if (language === 'sa-IN' || language === 'ur-IN') throw new Error('tts: no Bulbul voice for ' + language)
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
   const chunks = chunkText(speakable(text))
   if (!chunks.length) throw new Error('tts: empty text')
-  let v = voiceFor(speaker, language)
+  let v = voiceFor(speaker, language, style)
   const one = async c => {
     try { return await ttsOne(c, v, language, key) } catch (e) {
       if (v.model === 'bulbul:v4-flash') { // v4 failed: retry on v3 with the original speaker
@@ -165,7 +191,7 @@ export async function tts(text, speaker = 'priya', language = 'en-IN') {
 }
 
 export { BOARD_KINDS, BOARD_SHAPES, BOARD_ITEM_SHAPES, sanitizeStep } from './_board.js'
-export const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati', 'ml-IN': 'Malayalam', 'od-IN': 'Odia', 'pa-IN': 'Punjabi' }
+export const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati', 'ml-IN': 'Malayalam', 'od-IN': 'Odia', 'pa-IN': 'Punjabi', 'sa-IN': 'Sanskrit', 'ur-IN': 'Urdu' }
 export const CHAR_NAMES = { tara: 'Tara', bolt: 'Chintu', mishri: 'Mishri', gajju: 'Gajju' }
 export const CHAR_SUBJECTS = { tara: 'Maths', bolt: 'Science', mishri: 'English', gajju: 'History' }
 export const PERSONA = {

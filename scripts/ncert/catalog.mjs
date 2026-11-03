@@ -38,7 +38,8 @@ export function parseBooks(html) {
 export function groupCatalog(books, chapterTitles = {}) {
   const classes = []
   for (const b of books) {
-    if (b.code[1] === 'h' && !/^(hindi|sanskrit)$/.test(friendly(b.siteSubject)[0])) continue // Hindi medium only for language books
+    // B9: Hindi-medium books for every subject (was: language books only)
+    // (no medium filter)
     let c = classes.find((x) => x.grade === b.grade); if (!c) classes.push(c = { grade: b.grade, subjects: [] })
     const [id, name] = friendly(b.siteSubject)
     let sub = c.subjects.find((x) => x.id === id); if (!sub) c.subjects.push(sub = { id, name, books: [] })
