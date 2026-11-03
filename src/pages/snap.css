@@ -1,0 +1,32 @@
+.sn-wrap { max-width: 760px; }
+.sn-drop { border: 3px dashed var(--ink); border-radius: 18px 8px 16px 10px; padding: var(--sp-5) var(--sp-3); text-align: center; cursor: pointer; background: var(--paper); transform: rotate(-.4deg); min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.sn-drop.is-over { background: var(--highlight); }
+.sn-cam { color: var(--marker-blue); }
+.sn-drop-t { font-family: var(--font-hand); font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
+.sn-drop-s { color: var(--ink-soft); font-size: .95rem; }
+.sn-alt { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.sn-note { margin: var(--sp-3) 0 0; padding: 10px 14px; border-left: 4px solid var(--marker-orange); background: var(--paper-2); }
+
+.sn-reading { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
+.sn-photo { width: min(100%, 420px); }
+.sn-frame { position: relative; overflow: hidden; min-height: 200px; background: var(--paper-2); }
+.sn-frame img { display: block; width: 100%; max-height: 52vh; object-fit: contain; }
+.sn-pdf { min-height: 220px; display: grid; place-items: center; font-family: var(--font-hand); font-size: 3rem; color: var(--ink-faint); }
+.sn-scan { position: absolute; left: 0; right: 0; height: 28px; top: 0; border-top: 3px solid var(--marker-red); background: rgba(240, 201, 58, .28); animation: sn-sweep 2.2s ease-in-out infinite alternate; }
+.sn-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.sn-lines path { fill: none; stroke: var(--marker-blue); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 200; stroke-dashoffset: 200; animation: sn-draw 2.5s ease-in-out infinite; opacity: .75; vector-effect: non-scaling-stroke; }
+@keyframes sn-sweep { from { transform: translateY(0); } to { transform: translateY(calc(min(52vh, 320px) - 28px)); } }
+@keyframes sn-draw { 0% { stroke-dashoffset: 200; } 55%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -200; } }
+.sn-reading-t { font-family: var(--font-hand); font-size: 2rem; font-weight: 700; margin: 0; }
+.sn-dots::after { content: ''; animation: sn-dots 1.2s steps(4) infinite; }
+@keyframes sn-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75%, 100% { content: '...'; } }
+
+.sn-thumb { max-height: 150px; max-width: 100%; border: 2px solid var(--ink); transform: rotate(-1deg); margin-bottom: var(--sp-2); }
+.sn-lab { display: block; font-family: var(--font-hand); font-size: 1.6rem; font-weight: 700; margin: var(--sp-3) 0 6px; }
+.sn-hint { font-family: var(--font-body); font-size: .9rem; font-weight: 400; color: var(--ink-soft); }
+.sn-in, .sn-ta { width: 100%; box-sizing: border-box; font: inherit; font-size: 1.05rem; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 8px 4px 8px 5px; background: var(--paper); color: var(--ink); min-height: 44px; }
+.sn-ta { min-height: 210px; line-height: 1.5; resize: vertical; }
+.sn-h2 { font-size: 1.6rem; margin: var(--sp-4) 0 var(--sp-2); }
+.sn-chars { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.sn-go { width: 100%; margin-top: var(--sp-4); font-size: 1.7rem; min-height: 56px; }
+@media (prefers-reduced-motion: reduce) { .sn-scan, .sn-lines path, .sn-dots::after { animation: none; } .sn-lines path { stroke-dashoffset: 0; } }
