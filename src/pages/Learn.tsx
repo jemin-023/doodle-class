@@ -1,17 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getCharacter, LANGUAGES } from '../characters/registry'
 import type { Lesson, LanguageCode, Mood } from '../types'
 import Whiteboard from '../components/Whiteboard/Whiteboard'
 import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
 import { SketchButton, Icon, ProgressDots, TopBar, TextInput } from '../components/ui'
-import { streamLesson, askTeacher } from '../lib/api'
+import { streamLesson, askTeacher, generateQuiz } from '../lib/api'
 import { speak, stopSpeaking, setMuted, isMuted, prefetchSpeech } from '../lib/tts'
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
 import './pages.css'
 import { DoodleScatter } from '../components/Doodles/Doodles'
+import TeachBack from '../components/TeachBack/TeachBack'
+import LangSwitch from '../components/LangSwitch/LangSwitch'
+import ShareButton from '../components/Share/ShareButton'
+import type { LessonStep } from '../types'
+import InkLayer, { InkCard } from '../components/Ink/Ink'
+import type { InkHit } from '../components/Ink/hit'
 
 const ACK = 'Good question! Let me show you.'
 
@@ -19,10 +25,14 @@ export default function Learn() {
   const { characterId = 'tara' } = useParams()
   const [sp] = useSearchParams()
   const nav = useNavigate()
+  const loc = useLocation()
+  const source = (loc.state as { source?: string } | null)?.source
   const ch = getCharacter(characterId)
   const topic = sp.get('topic') || 'Something fun'
   const rawLang = sp.get('lang') || 'en-IN'
-  const lang = (LANGUAGES.some(l => l.code === rawLang) ? rawLang : 'en-IN') as LanguageCode
+  const urlLang = (LANGUAGES.some(l => l.code === rawLang) ? rawLang : 'en-IN') as LanguageCode
+  const [langOverride, setLangOverride] = useState<LanguageCode | null>(null)
+  const lang = langOverride ?? urlLang
   const grade = Number(sp.get('grade')) || 5
 
   const [lesson, setLesson] = useState<Lesson | null>(null)
@@ -54,15 +64,15 @@ export default function Learn() {
     if (fetched.current) return
     fetched.current = true
     const ac = new AbortController()
-    streamLesson({ topic, characterId, language: lang, grade }, {
+    streamLesson({ topic, characterId, language: urlLang, grade, ...(source ? { source } : {}) }, {
       signal: ac.signal,
-      onMeta: m => setLesson(l => l ?? { topic: m.topic, subject: m.subject, characterId, language: lang, steps: [] }),
+      onMeta: m => setLesson(l => l ?? { topic: m.topic, subject: m.subject, characterId, language: urlLang, steps: [] }),
       onStep: (st, idx) => {
         if (seen.current.has(idx)) return
         seen.current.add(idx)
-        prefetchSpeech(st.say, { speaker: ch.speaker, language: lang })
+        prefetchSpeech(st.say, { speaker: ch.speaker, language: urlLang })
         setLesson(l => ({
-          topic: l?.topic ?? topic, subject: l?.subject ?? '', characterId, language: lang,
+          topic: l?.topic ?? topic, subject: l?.subject ?? '', characterId, language: urlLang,
           ...(l ?? {}), steps: [...(l?.steps ?? []), st],
         }))
       },
@@ -70,9 +80,16 @@ export default function Learn() {
       .catch(() => { if (!ac.signal.aborted && seen.current.size === 0) setError(true) })
       .finally(() => { if (!ac.signal.aborted) { streamingRef.current = false; setStreaming(false) } })
     return () => { ac.abort(); fetched.current = false; seen.current = new Set(); setLesson(null) }
-  }, [topic, characterId, lang, grade])
+  }, [topic, characterId, urlLang, grade])
 
   useEffect(() => () => { runId.current++; stopSpeaking(); stopListening() }, [])
+  // Warm the quiz while the lesson plays, so "Test yourself" opens instantly (server caches + dedupes it).
+  const quizWarmed = useRef(false)
+  useEffect(() => {
+    if (streaming || quizWarmed.current || !lesson || lesson.steps.length < 3 || source || (lesson as Lesson & { fallback?: boolean }).fallback) return
+    quizWarmed.current = true
+    void generateQuiz({ topic, language: urlLang, grade, lesson }).catch(() => {})
+  }, [streaming, lesson, source, topic, urlLang, grade])
   useEffect(() => { prefetchSpeech(ACK, { speaker: ch.speaker, language: lang }) }, [ch.speaker, lang])
 
   const steps = lesson?.steps ?? []
@@ -123,20 +140,48 @@ export default function Learn() {
     else if (!streaming) { setWaiting(false); setFinished(true) }
   }, [waiting, steps.length, streaming, step])
 
-  const doAsk = async () => {
-    const q = question.trim()
-    if (!q || asking || !lesson) return
+  /** Ask the teacher and insert the answer right after the current step. Returns true on success. */
+  const runAsk = async (q: string, focus?: string[], boardQ?: string): Promise<boolean> => {
+    if (!q || asking || !lesson) return false
     setAsking(true); setPlaying(false); stopSpeaking(); setMood('thinking'); setWaiting(false)
     if (lang === 'en-IN') void speak(ACK, { speaker: ch.speaker, language: lang }).catch(() => {})
+    let ok = false
     try {
-      const ans = await askTeacher({ question: q, lesson, characterId, language: lang, grade })
-      const ns = { ...ans, board: [{ kind: 'text' as const, text: 'Q: ' + q }, ...ans.board] }
+      const ans = await askTeacher({ question: q, lesson, characterId, language: lang, grade, ...(focus?.length ? { focus } : {}) })
+      const ns = { ...ans, board: [{ kind: 'text' as const, text: 'Q: ' + (boardQ ?? q) }, ...ans.board] }
       const at = step + 1
       setLesson(l => l && { ...l, steps: [...l.steps.slice(0, at), ns, ...l.steps.slice(at)] })
-      setStep(at); setFinished(false); setQuestion(''); setAskOpen(false)
-      setPlaying(true)
+      setStep(at); setFinished(false)
+      setPlaying(true); ok = true
     } catch { /* keep panel open */ }
     setAsking(false)
+    return ok
+  }
+  const doAsk = async () => {
+    const q = question.trim()
+    if (await runAsk(q)) { setQuestion(''); setAskOpen(false) }
+  }
+
+  // "Circle what you don't understand": pen ink -> hit-test -> teacher card -> askTeacher with focus
+  const [inkHost, setInkHost] = useState<HTMLDivElement | null>(null)
+  const [inkCard, setInkCard] = useState<{ hit: InkHit | null } | null>(null)
+  const inkWasPlaying = useRef(false)
+  const onCircle = (hit: InkHit | null) => {
+    if (!started || finished || asking) return
+    if (!inkCard) inkWasPlaying.current = playing
+    setPlaying(false); stopSpeaking()
+    setInkCard({ hit })
+  }
+  const closeInk = () => {
+    setInkCard(null)
+    if (inkWasPlaying.current) setPlaying(true)
+  }
+  const inkAsk = async (q: string) => {
+    const hit = inkCard?.hit
+    const label = hit ? hit.items.map(i => i.label).join(' / ') : ''
+    const ok = await runAsk(q, hit?.items.map(i => i.text), label ? label.slice(0, 80) : q)
+    if (ok) setInkCard(null)
+    else { setInkCard(null); setQuestion(q); setAskOpen(true) } // anything failed: normal doubt panel
   }
   const mic = async () => {
     if (listenState !== 'idle') { stopListening(); return }
@@ -145,6 +190,22 @@ export default function Learn() {
       if (t) setQuestion(t)
     } catch { /* ignore */ }
     setListenState('idle')
+  }
+
+  /** Insert a step right after the current one and play it (used by doubts and teach-back corrections). */
+  const insertStep = (ns: LessonStep) => {
+    stopSpeaking()
+    const at = step + 1
+    setLesson(l => l && { ...l, steps: [...l.steps.slice(0, at), ns, ...l.steps.slice(at)] })
+    setStep(at); setFinished(false); setStarted(true); setPlaying(true)
+  }
+  /** Swap in a translated lesson (same steps, new language) and replay the current step. */
+  const switchLanguage = (translated: Lesson, code: LanguageCode) => {
+    stopSpeaking()
+    setLangOverride(code)
+    setLesson(translated)
+    writtenRef.current = -1
+    setNonce(n => n + 1)
   }
 
   const onWritten = useCallback((s: number) => {
@@ -160,7 +221,7 @@ export default function Learn() {
   const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m) }
   const begin = () => { setStarted(true); setPlaying(true) }
   const toQuiz = () =>
-    nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${lang}&grade=${grade}`, { state: { lesson } })
+    nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${lang}&grade=${grade}`, { state: { lesson, source } })
 
   const thinking = steps.length === 0 && !error
   const say = error ? "Oops, my markers dried up. Let's go back and try again."
@@ -178,7 +239,7 @@ export default function Learn() {
       <main className="pg-wrap pg-learn">
         <h2 className="pg-ltitle">{ch.name} is teaching: <span style={{ color: ch.color }}>{lesson?.topic || topic}</span></h2>
         <div className="pg-layout">
-          <div className="pg-board">
+          <div className="pg-board" ref={setInkHost}>
             {thinking && <div className="pg-board-msg">Getting my markers ready…</div>}
             {error && <div className="pg-board-msg">Couldn't load the lesson.</div>}
             {steps.length > 0 && !started && (
@@ -190,6 +251,7 @@ export default function Learn() {
             {steps.length > 0 && started && (
               <Whiteboard steps={steps} currentStep={step} accent={ch.color} onStepWritten={onWritten} />
             )}
+            {steps.length > 0 && started && <InkLayer host={inkHost} onCircle={onCircle} marked={inkCard?.hit ?? null} />}
           </div>
           <aside className="pg-side">
             <Character id={characterId} mood={shownMood} size={200} />
@@ -205,6 +267,10 @@ export default function Learn() {
                   <button className="pg-ib" aria-label="Next step" onClick={() => go(step + 1)}><Icon name="next" size={22} /></button>
                   <button className="pg-ib" aria-label="Replay step" onClick={() => { setFinished(false); setPlaying(true); setNonce(n => n + 1) }}><Icon name="replay" size={22} /></button>
                   <button className="pg-ib" aria-label={muted ? 'Unmute' : 'Mute'} onClick={toggleMute}><Icon name={muted ? 'mute' : 'speaker'} size={22} /></button>
+                </div>
+                <div className="pg-extras">
+                  {lesson && <LangSwitch lesson={lesson} current={lang} disabled={streaming} onSwitch={switchLanguage} />}
+                  <ShareButton topic={lesson?.topic || topic} characterId={characterId} language={urlLang} grade={grade} />
                 </div>
                 <ProgressDots total={steps.length} current={step} />
                 {started && streaming && <div className="pg-note">{ch.name} is writing more…</div>}
@@ -235,6 +301,7 @@ export default function Learn() {
                     ))}
                   </div>
                 )}
+                {finished && lesson && <TeachBack lesson={lesson} characterId={characterId} language={lang} grade={grade} onCorrection={insertStep} />}
                 {finished && <SketchButton onClick={toQuiz}>Test yourself →</SketchButton>}
                 {fallback && <div className="pg-note">offline sample lesson</div>}
               </>
@@ -242,6 +309,7 @@ export default function Learn() {
             {error && <SketchButton onClick={() => nav('/')}>Back home</SketchButton>}
           </aside>
         </div>
+        {inkCard && <InkCard hit={inkCard.hit} busy={asking} lang={lang} onAsk={inkAsk} onClose={closeInk} />}
       </main>
     </div>
   )
