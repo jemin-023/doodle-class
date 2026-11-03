@@ -1,4 +1,4 @@
-import { chat, extractJSON, parseBody, hasKey, CHAR_NAMES } from './_sarvam.js'
+import { chat, extractJSON, parseBody, hasKey, CHAR_NAMES , rejectNonPost } from './_sarvam.js'
 
 function fallback(ms) {
   const g = new Map()
@@ -13,6 +13,7 @@ function fallback(ms) {
 }
 
 export default async function handler(req, res) {
+  if (rejectNonPost(req, res)) return
   const b = parseBody(req)
   const ms = (Array.isArray(b.mistakes) ? b.mistakes : []).slice(0, 30).map(m => ({
     topic: String(m?.topic || '').slice(0, 80), prompt: String(m?.prompt || '').slice(0, 200),

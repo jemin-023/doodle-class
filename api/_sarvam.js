@@ -9,15 +9,43 @@ export function parseBody(req) {
   return b && typeof b === 'object' ? b : {}
 }
 
+const LANGS = ['en-IN', 'hi-IN', 'ta-IN', 'te-IN', 'kn-IN', 'mr-IN', 'bn-IN', 'gu-IN']
+export function cleanLang(l) { return LANGS.includes(l) ? l : 'en-IN' }
+export function cleanGrade(g) { const n = Math.round(Number(g)); return n >= 1 && n <= 10 ? n : 5 }
+export function cleanTopic(t, def = 'Photosynthesis') { return String(t || def).replace(/\s+/g, ' ').trim().slice(0, 120) || def }
+/** Returns true (and sends 405) when the request is not POST. */
+export function rejectNonPost(req, res) {
+  if (req.method && req.method !== 'POST') { res.setHeader?.('Allow', 'POST'); res.status(405).json({ error: 'method not allowed' }); return true }
+  return false
+}
+async function fetchRetry(url, init, ms) {
+  let r
+  for (let a = 0; a < 2; a++) {
+    try { r = await fetch(url, { ...init, signal: AbortSignal.timeout(ms) }) }
+    catch (e) { if (a === 1) throw e; await new Promise(z => setTimeout(z, 400)); continue }
+    if ((r.status === 429 || r.status >= 500) && a === 0) { await new Promise(z => setTimeout(z, 400)); continue }
+    return r
+  }
+  return r
+}
+
+/** Make text safe to speak: strip markdown and LaTeX into words. */
+export function speakable(t) {
+  let s = String(t || '')
+  const rep = [[/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1 over $2'], [/\\sqrt\s*\{([^{}]*)\}/g, 'square root of $1'], [/\\times|\\cdot/g, ' times '], [/\\div/g, ' divided by '], [/\\pm/g, ' plus or minus '], [/\\(?:le|leq)\b/g, ' less than or equal to '], [/\\(?:ge|geq)\b/g, ' greater than or equal to '], [/\\pi\b/g, ' pi '], [/\\(?:rightarrow|to)\b/g, ' gives '], [/\^\{?2\}?/g, ' squared '], [/\^\{?3\}?/g, ' cubed '], [/\^\{?([^{}\s]+)\}?/g, ' to the power $1 '], [/\\\\/g, ', '], [/\\[a-zA-Z]+/g, ' '], [/[{}$]/g, ''], [/\*+/g, ''], [/_{1,}/g, ' '], [/`+/g, ''], [/^#+\s*/gm, ''], [/^\s*[-•]\s+/gm, ''], [/\[([^\]]*)\]\([^)]*\)/g, '$1'], [/=/g, ' equals '], [/\+/g, ' plus '], [/\s+/g, ' ']]
+  for (const [a, b] of rep) s = s.replace(a, b)
+  return s.trim()
+}
+
 export async function chat(messages, { temperature = 0.4, max_tokens = 4000 } = {}) {
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
-  const r = await fetch('https://api.sarvam.ai/v1/chat/completions', {
+  const r = await fetchRetry('https://api.sarvam.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key, Authorization: `Bearer ${key}` },
     body: JSON.stringify({ model: CHAT_MODEL, messages, temperature, max_tokens, reasoning_effort: null }),
-  })
-  if (!r.ok) throw new Error(`sarvam chat ${r.status}: ${(await r.text()).slice(0, 200)}`)
+  }, 25000)
+  if (!r.ok) throw new Error(`sarvam chat ${r.status}`)
   const j = await r.json()
   return j?.choices?.[0]?.message?.content ?? ''
 }
@@ -56,7 +84,7 @@ function chunkText(text, max = 450) {
 
 async function ttsOne(text, speaker, language, key) {
   return fetch('https://api.sarvam.ai/text-to-speech', {
-    method: 'POST',
+    method: 'POST', signal: AbortSignal.timeout(15000),
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
     body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3', output_audio_codec: 'mp3', speech_sample_rate: 16000, pace: 1.1, temperature: 0.8 }),
   })
@@ -65,12 +93,13 @@ async function ttsOne(text, speaker, language, key) {
 export async function tts(text, speaker = 'priya', language = 'en-IN') {
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
-  const chunks = chunkText(text)
+  const chunks = chunkText(speakable(text))
+  if (!chunks.length) throw new Error('tts: empty text')
   let spk = speaker
   const one = async c => {
     let r = await ttsOne(c, spk, language, key)
     if (!r.ok && spk !== 'priya') { spk = 'priya'; r = await ttsOne(c, spk, language, key) }
-    if (!r.ok) throw new Error(`sarvam tts ${r.status}: ${(await r.text()).slice(0, 200)}`)
+    if (!r.ok) throw new Error(`sarvam tts ${r.status}`)
     const j = await r.json()
     if (!j?.audios?.[0]) throw new Error('tts: no audio')
     return j.audios[0]
@@ -110,11 +139,11 @@ export async function* chatStream(messages, { temperature = 0.4, max_tokens = 40
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
   const r = await fetch('https://api.sarvam.ai/v1/chat/completions', {
-    method: 'POST', signal,
+    method: 'POST', signal: signal || AbortSignal.timeout(25000),
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key, Authorization: `Bearer ${key}` },
     body: JSON.stringify({ model: CHAT_MODEL, messages, temperature, max_tokens, reasoning_effort: null, stream: true }),
   })
-  if (!r.ok || !r.body) throw new Error(`sarvam chat stream ${r.status}: ${(await r.text()).slice(0, 200)}`)
+  if (!r.ok || !r.body) throw new Error(`sarvam chat stream ${r.status}`)
   const dec = new TextDecoder()
   let buf = ''
   for await (const chunk of r.body) {

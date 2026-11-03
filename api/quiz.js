@@ -1,4 +1,4 @@
-import { chat, extractJSON, parseBody } from './_sarvam.js'
+import { chat, extractJSON, parseBody , cleanLang, cleanGrade, cleanTopic, rejectNonPost } from './_sarvam.js'
 import { SAMPLE_QUIZZES } from './_samples.js'
 
 const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati' }
@@ -36,8 +36,9 @@ function sanitize(raw, req) {
 }
 
 export default async function handler(req, res) {
+  if (rejectNonPost(req, res)) return
   const body = parseBody(req)
-  const request = { topic: String(body.topic || 'Photosynthesis').slice(0, 100), language: body.language || 'en-IN', grade: Number(body.grade) || 5, lesson: body.lesson }
+  const request = { topic: cleanTopic(body.topic), language: cleanLang(body.language), grade: cleanGrade(body.grade), lesson: body.lesson }
   try {
     const lang = LANG_NAMES[request.language] || 'English'
     const ctx = request.lesson?.steps

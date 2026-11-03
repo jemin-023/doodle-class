@@ -14,7 +14,14 @@ import '../components/Quiz/quiz.css'
 import { DoodleScatter } from '../components/Doodles/Doodles'
 
 const LETTERS = ['A', 'B', 'C', 'D']
-const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+const clean = (s: string) => (s ?? '').replace(/\*\*/g, '')
+const norm = (s: string) => clean(s).trim().replace(/\s+/g, ' ').toLowerCase()
+const same = (a: string, b: string) => {
+  const f = (s: string) => norm(s).replace(/[\s.,!?;:'"`“”‘’।]/g, '')
+  const x = f(a), y = f(b)
+  return x !== '' && x === y
+}
+const isFillQ = (q: QuizQuestion) => q.type === 'fill' || !q.options || q.options.length === 0
 
 const WORDS: Record<string, number> = { one: 1, won: 1, ek: 1, first: 1, two: 2, to: 2, too: 2, do: 2, second: 2, three: 3, teen: 3, third: 3, four: 4, for: 4, char: 4, fourth: 4 }
 const LETTER_WORDS: Record<string, number> = { a: 1, ay: 1, b: 2, be: 2, bee: 2, c: 3, see: 3, sea: 3, d: 4, dee: 4 }
@@ -128,7 +135,7 @@ export default function QuizPage() {
 
   const submit = useCallback((answer: string) => {
     if (!q || answered || !answer.trim()) return
-    const ok = norm(answer) === norm(q.answer)
+    const ok = same(answer, q.answer)
     setCorrect(ok); setAnswered(true)
     if (ok) setScore(s => s + 1)
     recordAnswer({ topic, characterId, questionId: q.id, prompt: q.prompt, answer, correct: ok, language })
@@ -136,7 +143,7 @@ export default function QuizPage() {
   }, [q, answered, character.speaker, language, topic, characterId])
 
   const next = useCallback(() => {
-    stopSpeaking()
+    stopSpeaking(); stopListening()
     if (idx + 1 >= total) {
       const finalScore = score
       saveResult({ topic, characterId, bestScore: finalScore, total, stars: starsFor(finalScore, total) })
@@ -151,11 +158,12 @@ export default function QuizPage() {
     if (!q || done) return
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null
-      const inInput = el?.tagName === 'INPUT'
+      const inInput = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || !!el?.isContentEditable
+      if (el?.tagName === 'BUTTON') return
       if (e.key === 'Enter') {
         if (answered) { e.preventDefault(); next() }
-        else if (!inInput && q.type !== 'fill' && picked) { e.preventDefault(); submit(picked) }
-      } else if (!answered && !inInput && q.options && /^[1-4]$/.test(e.key)) {
+        else if (!inInput && !isFillQ(q) && picked) { e.preventDefault(); submit(picked) }
+      } else if (!answered && !inInput && !isFillQ(q) && q.options && /^[1-4]$/.test(e.key)) {
         const o = q.options[Number(e.key) - 1]
         if (o) setPicked(o)
       }
@@ -172,7 +180,7 @@ export default function QuizPage() {
     const t = await listen({ language, onState: setListenState })
     if (!t) { setHeard(''); return }
     setHeard(t)
-    if (q.type === 'fill') setFillText(t.replace(/[.।]+$/, ''))
+    if (isFillQ(q)) setFillText(t.replace(/[.।]+$/, ''))
     else { const m = matchOption(t, q); if (m) setPicked(m) }
   }
 
@@ -191,7 +199,7 @@ export default function QuizPage() {
   const retry = () => {
     stopSpeaking()
     setQuestions(qs => (qs ? reshuffle(qs) : qs))
-    setIdx(0); setScore(0); setDone(false); setPicked(null); setFillText(''); setAnswered(false); setCorrect(false)
+    setIdx(0); setScore(0); setDone(false); setPicked(null); setFillText(''); setAnswered(false); setCorrect(false); setHeard(null); stopListening()
   }
 
   const learnQs = `topic=${encodeURIComponent(topic)}&lang=${language}&grade=${grade}`
@@ -206,11 +214,11 @@ export default function QuizPage() {
   if (loading) { mood = 'thinking'; bubble = 'Hmm, let me think of some good ones…'; typing = true }
   else if (error) { mood = 'sad'; bubble = 'Oops, my pencil snapped!' }
   else if (done) { mood = stars > 0 ? 'happy' : 'sad'; bubble = stars === 3 ? 'Perfect! You are a star!' : stars > 0 ? 'Nice work! Want to go again?' : 'Every try teaches something. Let’s go again!' }
-  else if (answered && q) { mood = correct ? 'happy' : 'sad'; bubble = `${correct ? 'Nailed it!' : 'Close one — here’s why:'} ${q.explanation}` }
+  else if (answered && q) { mood = correct ? 'happy' : 'sad'; bubble = `${correct ? 'Nailed it!' : 'Close one — here’s why:'} ${clean(q.explanation)}` }
   else { mood = 'idle'; bubble = 'Take your time. You can do it!' }
 
   const renderOption = (o: string, i: number) => {
-    const isAns = norm(o) === norm(q!.answer)
+    const isAns = same(o, q!.answer)
     const isPicked = picked === o
     const cls = ['qz-opt']
     if (!answered && isPicked) cls.push('is-picked')
@@ -219,8 +227,8 @@ export default function QuizPage() {
     return (
       <button key={o + i} type="button" className={cls.join(' ')} disabled={answered} aria-pressed={isPicked} onClick={() => setPicked(o)}>
         <span className="qz-letter">{LETTERS[i]}</span>
-        <span className="qz-opt-text">{o}</span>
-        {answered && isAns && <span className="qz-mark ok"><Icon name="check" size={30} /></span>}
+        <span className="qz-opt-text">{clean(o)}</span>
+        {answered && isAns && <span className="qz-mark ok qz-popmark"><Icon name="check" size={30} /><span className="qz-burst" aria-hidden="true">{[0,1,2,3,4,5].map(n => <i key={n} style={{ ['--a' as string]: `${n * 60}deg` }}>✦</i>)}</span></span>}
         {answered && isPicked && !isAns && <span className="qz-mark bad"><Icon name="cross" size={30} /></span>}
         {answered && isAns && <span className="qz-circle"><Scribble kind="circle" color="var(--ok)" /></span>}
       </button>
@@ -271,9 +279,9 @@ export default function QuizPage() {
           {q && !done && (
             <SketchCard key={q.id + idx} tilt={tilt} tape className="qz-card">
               <p className="qz-qnum">Question {idx + 1} of {total}</p>
-              <h2 className="qz-prompt" style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '1.35rem' }}>{q.prompt}</h2>
+              <h2 className="qz-prompt" style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '1.35rem' }}>{clean(q.prompt)}</h2>
 
-              {q.type === 'fill' ? (
+              {isFillQ(q) ? (
                 <>
                   <div className="qz-fill">
                     <input
@@ -291,7 +299,7 @@ export default function QuizPage() {
                   {micButton}
                   {answered && (
                     <div className="qz-answer-line">
-                      {correct ? 'Yes!' : 'Answer:'} {q.answer}
+                      {correct ? 'Yes!' : 'Answer:'} {clean(q.answer)}
                     </div>
                   )}
                 </>
@@ -313,7 +321,7 @@ export default function QuizPage() {
                 </div>
               )}
               <div className="qz-dots"><ProgressDots total={total} current={idx} /></div>
-              {!answered && q.type !== 'fill' && <p className="qz-hint">Press 1–4 to choose, Enter to check</p>}
+              {!answered && !isFillQ(q) && <p className="qz-hint">Press 1–4 to choose, Enter to check</p>}
             </SketchCard>
           )}
         </main>

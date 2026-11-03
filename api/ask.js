@@ -1,13 +1,14 @@
-import { chat, extractJSON, parseBody, sanitizeStep, LANG_NAMES, PERSONA, CHAR_NAMES } from './_sarvam.js'
+import { chat, extractJSON, parseBody, sanitizeStep, LANG_NAMES, PERSONA, CHAR_NAMES , cleanLang, cleanGrade, rejectNonPost } from './_sarvam.js'
 
 export default async function handler(req, res) {
+  if (rejectNonPost(req, res)) return
   const b = parseBody(req)
   const question = String(b.question || '').slice(0, 300)
   try {
     const id = b.characterId || 'tara'
     const name = CHAR_NAMES[id] || 'Tara'
-    const lang = LANG_NAMES[b.language] || 'English'
-    const grade = Number(b.grade) || 5
+    const lang = LANG_NAMES[cleanLang(b.language)] || 'English'
+    const grade = cleanGrade(b.grade)
     const ctx = (b.lesson?.steps || []).map(s => s.say).join(' ').slice(0, 600)
     const sys = `You are ${PERSONA[id] || name}, a friendly teacher for children. Reply with ONE JSON object only, no markdown.`
     const user = `You are teaching "${b.lesson?.topic || ''}" to a grade ${grade} student. Lesson so far: ${ctx}

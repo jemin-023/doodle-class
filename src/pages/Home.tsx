@@ -121,14 +121,15 @@ export default function Home() {
           </div>
         </section>
 
-        <p className="pg-links" style={{ margin: '32px 0 0', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          <Link to="/progress" >See my progress →</Link>
-          <Link to={`/journey/${cid}`} >My chapter map →</Link>
-          <Link to="/profile">My profile →</Link>
-          <Link to="/practice">Just a quiz →</Link>
-          <Link to={`/talk/${tchr.id}`}>Talk to {tchr.name} →</Link>
-          <Link to="/syllabus" >Upload my syllabus →</Link>
-        </p>
+        <nav className="pg-tabs" aria-label="More places">
+          <Link to={`/learn/${cid}`} onClick={e => { e.preventDefault(); document.getElementById('pg-topic-h')?.scrollIntoView({ behavior: 'smooth' }) }}>Learn</Link>
+          <Link to="/practice">Just a quiz</Link>
+          <Link to={`/talk/${tchr.id}`}>Talk</Link>
+          <Link to={`/journey/${cid}`}>My chapter map</Link>
+          <Link to="/progress">Progress</Link>
+          <Link to="/profile">Profile</Link>
+          <Link to="/syllabus">Upload syllabus</Link>
+        </nav>
 
         {history.length > 0 && (
           <section className="pg-recent" aria-labelledby="pg-rec">

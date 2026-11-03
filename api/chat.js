@@ -8,8 +8,8 @@ export default async function handler(req, res) {
     const name = CHAR_NAMES[id] || 'Tara'
     const lang = LANG_NAMES[b.language] || 'English'
     const grade = Number(b.grade) || 5
-    const hist = (Array.isArray(b.history) ? b.history : []).slice(-10)
-      .map(h => `${h.role === 'user' ? 'Student' : name}: ${String(h.text || '').slice(0, 300)}`).join('\n')
+    const hist = (Array.isArray(b.history) ? b.history : []).slice(-8)
+      .map(h => `${h.role === 'user' ? 'Student' : name}: ${String(h.text || '').replace(/\*\*/g, '').slice(0, 300)}`).join('\n')
     const sys = `You are ${PERSONA[id] || name}, a warm, playful teacher chatting live with a grade ${grade} child. Reply with ONE JSON object only, no markdown.`
     const user = `Conversation so far:
 ${hist || '(none yet)'}

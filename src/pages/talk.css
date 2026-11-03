@@ -14,3 +14,10 @@
 .talk-hands { font-family: 'Caveat', cursive; font-size: 1.2rem; }
 @keyframes talk-pulse { 50% { transform: scale(1.12); } }
 @media (max-width: 760px) { .talk-main { grid-template-columns: 1fr; } }
+.talk-micwrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.talk-mic { width: 110px; height: 110px; font-size: 3rem; position: relative; box-shadow: 0 6px 0 #23211e; }
+.talk-mic.rec { animation: none; }
+.talk-mic.rec::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 4px solid currentColor; opacity: .6; animation: talk-ring 1.4s ease-out infinite; }
+@keyframes talk-ring { from { transform: scale(1); opacity: .6; } to { transform: scale(1.5); opacity: 0; } }
+.talk-label { font-family: 'Caveat', cursive; font-size: 1.5rem; }
+.talk-notice { text-align: center; font-family: 'Caveat', cursive; font-size: 1.4rem; color: #b3402a; padding: 0 16px; }

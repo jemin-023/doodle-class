@@ -7,6 +7,7 @@ export function sttSupported(): boolean {
 }
 
 let stopFn: (() => void) | null = null
+export let lastSttError = ''
 
 function toBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -22,6 +23,7 @@ export async function listen(opts: { language: LanguageCode; maxMs?: number; onS
   const { language, maxMs = 6000, onState } = opts
   let stream: MediaStream | null = null
   let ctx: AudioContext | null = null
+  lastSttError = ''
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const mime = typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : ''
@@ -74,7 +76,8 @@ export async function listen(opts: { language: LanguageCode; maxMs?: number; onS
     const t = typeof j.transcript === 'string' ? j.transcript.trim() : ''
     if (t) { try { localStorage.setItem('doodle-class:voice-used', '1') } catch { /* ignore */ } }
     return t
-  } catch {
+  } catch (e) {
+    lastSttError = (e as { name?: string })?.name || 'error'
     return ''
   } finally {
     stopFn = null

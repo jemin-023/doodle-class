@@ -16,8 +16,8 @@
 .gm-label{font-family:var(--font-hand);font-size:17px;fill:var(--ink)}
 .gm-pulse{animation:gm-pulse 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes gm-pulse{50%{transform:scale(1.14)}}
-.gm-shake{animation:gm-shake .45s}
-@keyframes gm-shake{20%{transform:translateX(-10px) rotate(-3deg)}40%{transform:translateX(10px) rotate(3deg)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.gm-shake{animation:gm-shake .6s}
+@keyframes gm-shake{20%{transform:translateX(-18px) rotate(-6deg)}40%{transform:translateX(18px) rotate(6deg)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 .gm-bob{animation:gm-bob 2.4s ease-in-out infinite}
 @keyframes gm-bob{50%{transform:translateY(-6px)}}
 .gm-heartpop{animation:gm-pop .5s}

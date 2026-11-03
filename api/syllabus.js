@@ -1,4 +1,4 @@
-import { chat, extractJSON, parseBody, hasKey } from './_sarvam.js'
+import { chat, extractJSON, parseBody, hasKey , cleanGrade, rejectNonPost } from './_sarvam.js'
 
 const TEACHERS = ['tara', 'bolt', 'mishri', 'gajju']
 const COLORS = ['#d9472b', '#2f5fd0', '#2f8a4c', '#5d5850', '#7a4a1f', '#b7791f']
@@ -39,7 +39,9 @@ function sanitize(j, text) {
 }
 
 export default async function handler(req, res) {
-  const { text = '', grade = 5 } = parseBody(req)
+  if (rejectNonPost(req, res)) return
+  const { text = '', grade: g } = parseBody(req)
+  const grade = cleanGrade(g)
   const t = String(text).slice(0, 8000)
   if (t.trim().length < 3) return res.status(400).json({ error: 'text required' })
   let book

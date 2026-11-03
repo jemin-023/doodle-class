@@ -101,3 +101,19 @@
 .pg-ib:hover { background: var(--highlight); transform: rotate(-2deg); }
 .pg-ib:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
 @media (max-width: 560px) { .pg-sheet, .pr-wrap, .sy-page, .gm-page { width: calc(100% - 32px); } }
+
+/* home tabs */
+.pg-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 28px; }
+.pg-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 16px; font-family: var(--font-hand); font-size: 1.4rem; color: var(--ink); text-decoration: none; background: var(--paper); border: 2px solid var(--ink); border-radius: 14px 18px 4px 4px / 16px 14px 4px 4px; max-width: 100%; }
+.pg-tabs a:nth-child(3n+1) { transform: rotate(-1deg); } .pg-tabs a:nth-child(3n+2) { transform: rotate(.8deg); }
+.pg-tabs a:hover, .pg-tabs a:focus-visible { background: var(--highlight); outline: none; }
+.pg-head h1, .pg-ltitle { overflow-wrap: anywhere; }
+.pg-grid { grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); }
+.pg-page svg, .pg-page img { max-width: 100%; }
+.ui-chip { min-height: 44px; }
+.ui-wordmark { min-height: 44px; }
+.pg-scribble { clip-path: inset(0 100% 0 0); animation: pg-draw 1s .3s ease-out forwards; }
+@keyframes pg-draw { to { clip-path: inset(0 0 0 0); } }
+@keyframes pg-wave { 0%,100% { rotate: 0deg } 25% { rotate: -6deg } 75% { rotate: 6deg } }
+.pg-teacher:hover .pg-teacher-in svg, .pg-teacher.is-sel .pg-teacher-in svg { transform-origin: 50% 90%; animation: pg-wave 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pg-scribble { animation: none; clip-path: none; } .pg-teacher .pg-teacher-in svg { animation: none !important; } }

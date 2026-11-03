@@ -103,10 +103,13 @@ export default function Learn() {
       }, 700)
     }
     checkRef.current = check
-    speak(curSay, { speaker: ch.speaker, language: lang })
-      .catch(() => { /* fall through */ })
-      .then(() => { spoken = true; check() })
+    let sp: Promise<void>
+    try { sp = Promise.resolve(speak(curSay, { speaker: ch.speaker, language: lang })) } catch { sp = Promise.resolve() }
+    sp.catch(() => { /* fall through */ }).then(() => { spoken = true; check() })
+    // safety nets so playback never stalls
+    const safety = setTimeout(() => { spoken = true; writtenRef.current = step; check() }, 45000)
     return () => {
+      clearTimeout(safety)
       runId.current++
       if (timer) clearTimeout(timer)
       checkRef.current = null
@@ -150,6 +153,7 @@ export default function Learn() {
   }, [])
 
   const go = (n: number) => {
+    if (Math.max(0, Math.min(last, n)) !== step) writtenRef.current = -1
     setFinished(false)
     setStep(Math.max(0, Math.min(last, n)))
   }
@@ -218,6 +222,17 @@ export default function Learn() {
                       <SketchButton disabled={asking || !question.trim()} onClick={doAsk}>Ask</SketchButton>
                     </div>
                     {(listenState !== 'idle' || asking) && <div className="pg-note">{asking ? 'thinking…' : 'listening…'}</div>}
+                  </div>
+                )}
+                {finished && (
+                  <div className="lc-burst" aria-hidden="true">
+                    <style>{`.lc-burst{position:relative;height:0;overflow:visible;pointer-events:none}
+.lc-burst i{position:absolute;left:50%;top:0;font-style:normal;font-size:26px;opacity:0;animation:lc-pop 1.4s ease-out forwards}
+@keyframes lc-pop{0%{opacity:1;transform:translate(0,0) scale(.3) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.lc-burst i{animation:none}}`}</style>
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                      <i key={i} style={{ '--dx': `${Math.round(Math.cos(i * Math.PI / 4) * 110)}px`, '--dy': `${Math.round(Math.sin(i * Math.PI / 4) * 90 - 30)}px`, '--r': `${i % 2 ? 200 : -200}deg`, color: ['#ffc83d', '#ff7a59', '#4cc38a', '#4d8dff'][i % 4], animationDelay: `${i * 40}ms` } as React.CSSProperties}>★</i>
+                    ))}
                   </div>
                 )}
                 {finished && <SketchButton onClick={toQuiz}>Test yourself →</SketchButton>}

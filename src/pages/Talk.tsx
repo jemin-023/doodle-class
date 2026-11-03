@@ -4,6 +4,7 @@ import Whiteboard from '../components/Whiteboard/Whiteboard'
 import Character from '../components/Characters/Character'
 import { SketchButton, TextInput, TopBar } from '../components/ui'
 import { getCharacter } from '../characters/registry'
+import * as sttMod from '../lib/stt'
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import { speak, stopSpeaking } from '../lib/tts'
 import type { LanguageCode, LessonStep, Mood } from '../types'
@@ -23,6 +24,9 @@ export default function Talk() {
   const [mood, setMood] = useState<Mood>('idle')
   const [started, setStarted] = useState(false)
   const [rec, setRec] = useState(false)
+  const [phase, setPhase] = useState<'idle' | 'listening' | 'thinking' | 'talking'>('idle')
+  const [notice, setNotice] = useState('')
+  const empties = useRef(0)
   const [text, setText] = useState('')
   const [hands, setHands] = useState(false)
   const handsRef = useRef(false)
@@ -34,16 +38,29 @@ export default function Talk() {
   handsRef.current = hands
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; stopSpeaking(); stopListening() } }, [])
+  useEffect(() => {
+    const vis = () => { if (document.hidden) { setHands(false); stopListening(); stopSpeaking() } }
+    document.addEventListener('visibilitychange', vis)
+    return () => document.removeEventListener('visibilitychange', vis)
+  }, [])
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines])
 
   const mic = useCallback(async () => {
     if (!alive.current || busy.current) return
-    setRec(true)
+    setRec(true); setPhase('listening'); setNotice('')
     let t = ''
     try { t = await listen({ language }) } catch { /* ignore */ }
     if (!alive.current) return
-    setRec(false)
-    if (t.trim()) void send(t.trim())
+    setRec(false); setPhase('idle')
+    if (t.trim()) { empties.current = 0; void send(t.trim()); return }
+    const err = sttMod.lastSttError
+    if (err === 'NotAllowedError' || err === 'SecurityError' || err === 'NotFoundError') {
+      setNotice('I cannot hear you yet. Please allow the microphone, or type below!'); setHands(false)
+    } else {
+      empties.current += 1
+      if (empties.current >= 2) { setHands(false); setNotice('I did not hear anything. Tap the mic to try again, or type!') }
+      else if (handsRef.current && !document.hidden) void mic()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language])
 
@@ -51,9 +68,9 @@ export default function Talk() {
     if (busy.current) return
     busy.current = true
     stopSpeaking()
-    const history = linesRef.current.slice(-10)
+    const history = linesRef.current.slice(-8).map(l => ({ role: l.role === 'user' ? 'user' : 'assistant', text: l.text }))
     if (msg) { linesRef.current = [...linesRef.current, { role: 'user', text: msg }]; setLines(linesRef.current) }
-    setMood('thinking')
+    setMood('thinking'); setPhase('thinking')
     let say = 'Tell me more!'
     let board: LessonStep['board'] = []
     try {
@@ -61,20 +78,21 @@ export default function Talk() {
       const j = await r.json()
       if (j.say) { say = j.say; board = j.board || [] }
     } catch { /* fallback */ }
-    if (!alive.current) return
+    if (!alive.current) { busy.current = false; return }
+    say = say.replace(/\*\*/g, '')
     linesRef.current = [...linesRef.current, { role: 'teacher', text: say }]
     setLines(linesRef.current)
-    if (board.length) setSteps(s => [...s, { say, board }])
-    setMood('talking')
+    if (Array.isArray(board) && board.length) setSteps(s => [...s, { say, board }])
+    setMood('talking'); setPhase('talking')
     try { await speak(say, { speaker: ch.speaker, language }) } catch { /* ignore */ }
-    if (!alive.current) return
-    setMood('idle')
+    if (!alive.current) { busy.current = false; return }
+    setMood('idle'); setPhase('idle')
     busy.current = false
-    if (handsRef.current && canMic) void mic()
+    if (handsRef.current && canMic && !document.hidden) void mic()
   }, [characterId, language, grade, ch.speaker, canMic, mic])
 
   const start = () => { setStarted(true); void send('') }
-  const submit = () => { const t = text.trim(); if (!t) return; setText(''); void send(t) }
+  const submit = () => { const t = text.trim(); if (!t || busy.current) return; setText(''); void send(t) }
 
   return (
     <div className="talk">
@@ -94,14 +112,18 @@ export default function Talk() {
           </div>
         </div>
       </div>
+      {notice && <div className="talk-notice" role="status">{notice}</div>}
       <div className="talk-bar">
         {!started ? (
           <SketchButton color={ch.color} onClick={start}>Tap to start talking with {ch.name}</SketchButton>
         ) : (
           <>
             {canMic && (
-              <button className={'talk-mic' + (rec ? ' rec' : '')} style={{ background: ch.color }} aria-label="Talk"
-                onClick={() => (rec ? stopListening() : void mic())}>{rec ? 'Stop' : 'Talk'}</button>
+              <div className="talk-micwrap">
+                <button className={'talk-mic' + (rec ? ' rec' : '')} style={{ background: ch.color, color: '#fff' }} aria-label={`Tap and talk to ${ch.name}`}
+                  onClick={() => (rec ? stopListening() : void mic())}>{rec ? 'Done' : '🎤'}</button>
+                <div className="talk-label">{phase === 'listening' ? 'Listening…' : phase === 'thinking' ? 'Thinking…' : phase === 'talking' ? `${ch.name} is talking…` : `Tap and talk to ${ch.name}`}</div>
+              </div>
             )}
             <form className="talk-form" onSubmit={e => { e.preventDefault(); submit() }}>
               <TextInput value={text} onChange={e => setText(e.target.value)} placeholder="Type here..." />

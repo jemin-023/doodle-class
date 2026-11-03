@@ -2,7 +2,7 @@
 
 Type any topic, pick a cartoon teacher, and a lesson is hand-written on a whiteboard while the character explains it aloud in one of eight Indian languages. A quiz, voice answers and spaced-repetition review follow.
 
-Built on Sarvam AI: `sarvam-105b` (chat), Bulbul v3 (text to speech), Saarika (speech to text). React 19 + Vite frontend, Vercel serverless functions.
+Built on Sarvam AI: `sarvam-105b` (chat), Bulbul v3 (text to speech), Saarika v2.5 (speech to text). React 19 + Vite frontend, Vercel serverless functions.
 
 ## How it works
 
@@ -22,7 +22,7 @@ sequenceDiagram
   B->>B: board writes step 1 while the rest still generates
   B->>F: POST /api/tts {step.say}
   F->>T: text-to-speech (chunked <=450 chars)
-  T-->>B: base64 WAV (next step prefetched during playback)
+  T-->>B: base64 mp3 (next step prefetched during playback)
   B->>F: POST /api/ask {question, lesson so far}
   F->>C: one-step completion
   F-->>B: new LessonStep, inserted after the current step
@@ -48,11 +48,45 @@ If a step fails, the request errors, or no key is set, the browser falls back (s
 
 ## Features
 
-- Topic to lesson with 4-7 steps: narration plus board items (titles, bullets, equations, highlights, examples, drawings)
-- Several characters, each with a subject and a Sarvam voice
-- Mute, replay, and raise-your-hand questions mid-lesson
-- 5-question quiz (MCQ, true/false, fill-in) with typed or spoken answers and explanations
-- Stars per topic, review queue, mastery per topic
+Live: https://doodle-class.vercel.app
+
+- Four teachers with kid-friendly Bulbul v3 voices: Tara (owl, Maths), Chintu (robot, Science), Mishri (cat, English), Gajju (elephant, History & GK).
+- Streaming hand-written multi-colour whiteboard: KaTeX equations, **keyword** highlights, notebook-doodle illustrations, playful motion.
+- Topic to lesson of 4-7 steps (narration plus titles, bullets, equations, highlights, examples, drawings).
+- "I have a doubt" mid-lesson: `/api/ask` inserts a new step at the current position.
+- Talk to your teacher (`/talk/:id`): voice-to-voice conversation with a hands-free mode, via `/api/chat`.
+- Just a quiz (`/practice`): pick a topic and get a quiz without a lesson.
+- Quizzes (MCQ, true/false, fill-in) with typed or spoken answers and explanations.
+- Chapters, boss battles (hearts, HP bar), XP and levels (`/journey/:id`, `/boss/:id/:chapter`).
+- Syllabus upload (`/syllabus`, PDF parsed with pdf.js) turned into a personal book.
+- Mistake memory coach: `/api/coach` finds recurring mistake patterns and offers remedial lessons.
+- Leitner spaced repetition and mastery on `/progress`; profile with badges on `/profile`.
+- Eight languages: English, Hindi, Tamil, Telugu, Kannada, Marathi, Bengali, Gujarati.
+- Offline fallbacks for lessons, quizzes and speech.
+
+## Models
+
+- LLM: `sarvam-105b`, reasoning disabled for latency.
+- TTS: Bulbul v3, parallel sentence-chunked mp3 with prefetch of the next step.
+- STT: Saarika v2.5.
+
+## Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `/api/lesson` | Full lesson as JSON |
+| `/api/lesson-stream` | Lesson as NDJSON, one step per line |
+| `/api/quiz` | Quiz questions for a topic |
+| `/api/ask` | Mid-lesson doubt, returns one new step |
+| `/api/chat` | Voice/text conversation with a teacher |
+| `/api/tts` | Bulbul v3 speech (chunked mp3) |
+| `/api/stt` | Saarika v2.5 transcription |
+| `/api/syllabus` | Syllabus text to chapters |
+| `/api/coach` | Mistake patterns and remedial lessons |
+
+## Routes
+
+`/` home, `/learn/:id`, `/talk/:id`, `/quiz`, `/practice`, `/journey/:id`, `/boss/:id/:chapter`, `/syllabus`, `/progress`, `/profile`.
 
 ## Run locally
 
@@ -70,7 +104,7 @@ Push to Vercel. `api/*.js` become serverless functions; set `SARVAM_API_KEY` in 
 ## Project structure
 
 ```
-api/            Vercel functions: lesson, lesson-stream, quiz, ask, tts, stt
+api/            Vercel functions: lesson, lesson-stream, quiz, ask, chat, tts, stt, syllabus, coach
   _sarvam.js    chat/TTS helpers, JSON extraction, text chunking
   _samples.js   offline fallback content
 server/dev.js   local dev server mirroring /api
@@ -87,8 +121,3 @@ docs/ARCHITECTURE.md
 ## Credits
 
 Inspired by PenEcho's idea of a hand-writing virtual teacher. No PenEcho code was used; this is an independent implementation, which keeps us clear of its AGPL license. rough.js is MIT licensed.
-
-## Also in this build
-- **Bring your syllabus:** upload a PDF or text syllabus (parsed in the browser with pdf.js). `sarvam-105b` turns it into a personal book of chapters, each ending in a boss battle.
-- **Mistake memory:** every wrong answer is logged. `/api/coach` groups the mistakes into recurring patterns (for example, "adds denominators when adding fractions"). The teacher brings these up on the home page with a one-tap lesson to fix each one.
-- **Chapters and boss battles:** XP, levels, chapters that unlock in order, and a timed boss quiz with hearts and an HP bar at the end of each chapter.

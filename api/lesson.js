@@ -1,4 +1,4 @@
-import { chat, extractJSON, parseBody } from './_sarvam.js'
+import { chat, extractJSON, parseBody , cleanLang, cleanGrade, cleanTopic, rejectNonPost } from './_sarvam.js'
 import { SAMPLE_LESSONS } from './_samples.js'
 
 const KINDS = ['title', 'text', 'bullet', 'equation', 'highlight', 'example', 'drawing']
@@ -37,12 +37,13 @@ function sanitize(raw, req) {
 }
 
 export default async function handler(req, res) {
+  if (rejectNonPost(req, res)) return
   const body = parseBody(req)
   const request = {
-    topic: String(body.topic || 'Photosynthesis').slice(0, 100),
+    topic: cleanTopic(body.topic),
     characterId: body.characterId || 'bolt',
-    language: body.language || 'en-IN',
-    grade: Number(body.grade) || 5,
+    language: cleanLang(body.language),
+    grade: cleanGrade(body.grade),
   }
   try {
     const ch = { id: request.characterId, name: ({ tara: 'Tara', bolt: 'Chintu', mishri: 'Mishri', gajju: 'Gajju' })[request.characterId] || 'Tara', subject: ({ tara: 'Maths', bolt: 'Science', mishri: 'English', gajju: 'History' })[request.characterId] || 'General' }

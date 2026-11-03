@@ -48,7 +48,7 @@ function parseRich(raw: string, mode: 'text' | 'equation'): Seg[] {
   raw.split(/(\*\*[^*]+\*\*)/).forEach(part => {
     if (!part) return
     if (/^\*\*[^*]+\*\*$/.test(part)) { out.push({ kind: 'em', text: part.slice(2, -2) }); return }
-    part.split(/(\b[A-Z][A-Z0-9]{1,}\b|\d+(?:[.,/]\d+)?)/).forEach(t => {
+    part.replace(/\*\*/g, '').split(/(\b[A-Z][A-Z0-9]{1,}\b|\d+(?:[.,/]\d+)?)/).forEach(t => {
       if (!t) return
       out.push({ kind: /^[A-Z][A-Z0-9]+$/.test(t) ? 'caps' : /^\d/.test(t) ? 'num' : 'plain', text: t })
     })
@@ -227,9 +227,14 @@ function plainToTex(t: string): string {
     .replace(/(?<![\\a-zA-Z{])([A-Za-z]{2,})(?![a-zA-Z}])/g, (w) => (w === 'frac' || w === 'times' || w === 'sqrt' ? w : '\\text{' + w + '}'))
 }
 function eqToHtml(raw: string): string {
-  const src = stripWrap(raw)
+  let src = raw
+  try { src = stripWrap(raw) } catch { /* use raw */ }
   const lines = src.split(/\\\\|\n| ; /).map(l => stripWrap(l).trim()).filter(Boolean).map(plainToTex)
-  const r = (tex: string) => katex.renderToString(tex, { throwOnError: false, displayMode: true })
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const r = (tex: string) => {
+    try { return katex.renderToString(tex, { throwOnError: false, displayMode: true }) }
+    catch { return '<div>' + esc(tex) + '</div>' }
+  }
   if (lines.length > 1 && lines.every(l => l.includes('='))) {
     return r('\\begin{aligned}' + lines.map(l => l.replace('=', '&=')).join(' \\\\ ') + '\\end{aligned}')
   }
@@ -238,8 +243,12 @@ function eqToHtml(raw: string): string {
 function inlineMath(raw: string): ReactNode[] {
   return raw.split(/(\$[^$]+\$)/).filter(Boolean).map((part, i) => {
     if (/^\$[^$]+\$$/.test(part)) {
-      const html = katex.renderToString(part.slice(1, -1), { throwOnError: false, displayMode: false })
-      return <span key={i} className="wb-im" dangerouslySetInnerHTML={{ __html: html }} />
+      try {
+        const html = katex.renderToString(part.slice(1, -1), { throwOnError: false, displayMode: false })
+        return <span key={i} className="wb-im" dangerouslySetInnerHTML={{ __html: html }} />
+      } catch {
+        return <span key={i}>{part.slice(1, -1)}</span>
+      }
     }
     return <span key={i}>{parseRich(part, 'text').map((g, k) => <span key={k} className={'wb-s wb-s-' + g.kind}>{g.text}</span>)}</span>
   })
@@ -291,7 +300,10 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
   const isEq = item.kind === 'equation'
   const hasInline = !isEq && item.kind !== 'drawing' && item.kind !== 'title' && /\$[^$]+\$/.test(rawText)
   const math = isEq || hasInline
-  const eqHtml = useMemo(() => (isEq ? eqToHtml(rawText) : ''), [isEq, rawText])
+  const eqHtml = useMemo(() => {
+    if (!isEq) return ''
+    try { return eqToHtml(rawText) } catch { return '' }
+  }, [isEq, rawText])
   const [n, setN] = useState(animate && !math ? 0 : chars.length)
   const [drawn, setDrawn] = useState(!animate)
   const typed = n >= chars.length
@@ -415,36 +427,37 @@ export default function Whiteboard({ steps, currentStep, accent = DEFAULT_ACCENT
   const stepIdx = Math.min(currentStep, steps.length - 1)
   const items = stepIdx >= 0 ? steps[stepIdx].board : []
 
-  const [prog, setProg] = useState({ steps, step: stepIdx, idx: 0 })
-  const fresh = prog.steps === steps && prog.step === stepIdx
+  const stepObj = stepIdx >= 0 ? steps[stepIdx] : undefined
+  const [prog, setProg] = useState<{ steps: unknown; step: number; idx: number }>({ steps: stepObj, step: stepIdx, idx: 0 })
+  const fresh = prog.steps === stepObj && prog.step === stepIdx
   const idx = reduced ? items.length : fresh ? prog.idx : 0
 
   const onItemDone = useCallback((i: number) => {
     setProg(p => {
-      const cur = p.steps === steps && p.step === stepIdx ? p.idx : 0
-      return { steps, step: stepIdx, idx: cur === i ? i + 1 : cur }
+      const cur = p.steps === stepObj && p.step === stepIdx ? p.idx : 0
+      return { steps: stepObj, step: stepIdx, idx: cur === i ? i + 1 : cur }
     })
-  }, [steps, stepIdx])
+  }, [stepObj, stepIdx])
 
   // fire onStepWritten once per (steps, step)
   const cbRef = useRef(onStepWritten)
   cbRef.current = onStepWritten
-  const firedFor = useRef<{ steps: LessonStep[]; step: number } | null>(null)
+  const firedFor = useRef<{ steps: unknown; step: number } | null>(null)
   useEffect(() => {
     if (stepIdx < 0 || idx < items.length) return
     const f = firedFor.current
-    if (f && f.steps === steps && f.step === stepIdx) return
+    if (f && f.steps === stepObj && f.step === stepIdx) return
     const t = window.setTimeout(() => {
-      firedFor.current = { steps, step: stepIdx }
+      firedFor.current = { steps: stepObj, step: stepIdx }
       cbRef.current?.(stepIdx)
     }, 0)
     return () => window.clearTimeout(t)
-  }, [idx, items.length, steps, stepIdx])
+  }, [idx, items.length, stepObj, stepIdx])
   // allow re-fire if we move away and come back
   useEffect(() => {
     const f = firedFor.current
-    if (f && (f.steps !== steps || f.step !== stepIdx)) firedFor.current = null
-  }, [steps, stepIdx])
+    if (f && (f.steps !== stepObj || f.step !== stepIdx)) firedFor.current = null
+  }, [stepObj, stepIdx])
 
   // auto-scroll
   const scrollRef = useRef<HTMLDivElement>(null)

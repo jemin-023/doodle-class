@@ -1,4 +1,4 @@
-import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS } from './_sarvam.js'
+import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS , cleanLang, cleanGrade, cleanTopic, rejectNonPost } from './_sarvam.js'
 import { SAMPLE_LESSONS } from './_samples.js'
 
 function pickSample(topic, characterId) {
@@ -8,12 +8,13 @@ function pickSample(topic, characterId) {
 }
 
 export default async function handler(req, res) {
+  if (rejectNonPost(req, res)) return
   const body = parseBody(req)
   const request = {
-    topic: String(body.topic || 'Photosynthesis').slice(0, 100),
+    topic: cleanTopic(body.topic),
     characterId: body.characterId || 'bolt',
-    language: body.language || 'en-IN',
-    grade: Number(body.grade) || 5,
+    language: cleanLang(body.language),
+    grade: cleanGrade(body.grade),
   }
   res.statusCode = 200
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
