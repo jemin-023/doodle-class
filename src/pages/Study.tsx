@@ -362,7 +362,7 @@ export default function Study() {
                       <SectionStatusIcon status={progress[`${chapter.file}|*`]?.status} />
                       <Icon name="star" size={28} />
                       <span className="st-t">Whole chapter</span>
-                      <span className="st-tag">{chapter.sections.length} parts</span>
+                      <span className="st-tag">{chapter.sections.length} {chapter.sections.length === 1 ? 'part' : 'parts'}</span>
                     </span>
                   </SketchCard>
                 </button>
@@ -374,23 +374,28 @@ export default function Study() {
                   ))}
                 </div>
               </li>
-              {chapter.sections.map(s => (
-                <li key={s.id} className="st-topic-li">
-                  <button type="button" className="st-item st-chap" onClick={() => go(s.id, s.title)}>
-                    <span className="st-num">{s.id}</span>
-                    <span className="st-t">{s.title}</span>
-                    <SectionStatusIcon status={progress[`${chapter.file}|${s.id}`]?.status} />
-                    <Icon name="next" size={18} />
-                  </button>
-                  <div className="st-chips-row" aria-label={`Practice tools for ${s.title}`}>
-                    {practiceModes.map(m => (
-                      <Link key={m.mode} to={practiceUrl(chapter.file, s.id, m.mode)} className="st-chip">
-                        {m.label}
-                      </Link>
-                    ))}
-                  </div>
-                </li>
-              ))}
+              {chapter.sections.map((s, idx) => {
+                // Skip if only 1 section and title matches whole chapter
+                if (chapter.sections.length === 1 && (s.title === chapter.title || s.title === 'Chapter')) return null
+                const numLabel = s.id.startsWith('s') ? `${idx + 1}` : s.id
+                return (
+                  <li key={s.id} className="st-topic-li">
+                    <button type="button" className="st-item st-chap" onClick={() => go(s.id, s.title)}>
+                      <span className="st-num">{numLabel}</span>
+                      <span className="st-t">{s.title}</span>
+                      <SectionStatusIcon status={progress[`${chapter.file}|${s.id}`]?.status} />
+                      <Icon name="next" size={18} />
+                    </button>
+                    <div className="st-chips-row" aria-label={`Practice tools for ${s.title}`}>
+                      {practiceModes.map(m => (
+                        <Link key={m.mode} to={practiceUrl(chapter.file, s.id, m.mode)} className="st-chip">
+                          {m.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </li>
+                )
+              })}
               <li>
                 <button type="button" className="st-item" onClick={other}>
                   <SketchCard tilt={0.6} color="var(--marker-orange)"><span className="st-row"><Icon name="pencil" size={28} /><span className="st-t">Something else (Other)</span><span className="st-tag">my own topic</span></span></SketchCard>

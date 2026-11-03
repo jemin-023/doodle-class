@@ -6,83 +6,117 @@ import { cacheGet, cachePut } from './_cache.js'
 
 function fallbackForMode(mode, chapterTitle, sec, langName) {
   const title = chapterTitle || (langName === 'Hindi' ? 'पाठ अभ्यास' : 'Chapter Practice')
+  const isSocial = /social|history|geograph|politic|civic|econom|society|india|develop|resource/i.test(title)
+
   if (mode === 'notes') {
     return {
       title: `${title} - Revision Notes`,
-      markdown: `# ${title}\n\n## Key Summary\n- Review the foundational concepts in this section.\n- Note the main terms, formulas, and real-world examples.\n\n## Important Principles\n- Keep definitions precise and practice recalling them.\n- Pay special attention to equations, units, and conditions.\n\n## Exam Tips\n- Draw neat labeled diagrams where applicable.\n- Write balanced equations with state symbols.`
+      markdown: isSocial
+        ? `# ${title}\n\n## Key Summary\n- Review the core concepts and historical context of ${title}.\n- Note the main terms, geographic factors, and key institutions.\n\n## Important Principles\n- Understand how society, policy, and resources interact.\n- Pay special attention to cause-and-effect relationships.\n\n## Exam Tips\n- Support your answers with specific examples or dates.\n- Use neat point-by-point explanations.`
+        : `# ${title}\n\n## Key Summary\n- Review the foundational concepts in ${title}.\n- Note the main terms, formulas, and real-world examples.\n\n## Important Principles\n- Keep definitions precise and practice recalling them.\n- Pay special attention to observations, laws, and units.\n\n## Exam Tips\n- Draw neat labeled diagrams where applicable.\n- Write clear step-by-step reasoning.`
     }
   }
   if (mode === 'cards') {
+    if (isSocial) {
+      return {
+        cards: [
+          { front: `What is the central theme of ${title}?`, back: `Understanding the essential principles and human impact explored in ${title}.` },
+          { front: `Why is ${title} important in our daily lives?`, back: 'It helps us understand how communities, institutions, and environments function and develop.' },
+          { front: 'How do evidence and sources shape our knowledge?', back: 'Primary documents, maps, and reliable data allow us to analyze events and facts objectively.' },
+          { front: 'What role do citizens and institutions play?', back: 'They work collaboratively to maintain balance, justice, and shared development in society.' }
+        ]
+      }
+    }
     return {
       cards: [
-        { front: `What is the core topic of ${title}?`, back: `The fundamental principles and observations introduced in this chapter.` },
-        { front: 'How can you verify that a reaction or process occurred?', back: 'By observing changes in state, temperature, colour, or evolution of gas.' },
-        { front: 'Why are balanced equations important?', back: 'To satisfy the law of conservation of mass: total mass of reactants equals total mass of products.' },
-        { front: 'What is an exothermic process?', back: 'A process in which heat energy is released along with the products.' },
-        { front: 'What is an endothermic process?', back: 'A process in which energy is absorbed from the surroundings.' },
-        { front: 'What precaution should always be taken in experiments?', back: 'Wear protective eyeglasses and handle reagents under teacher supervision.' }
+        { front: `What is the core topic of ${title}?`, back: `The fundamental principles and observations introduced in ${title}.` },
+        { front: 'What is the first step of the scientific method?', back: 'Careful observation of a phenomenon and asking a testable question.' },
+        { front: 'Why are controlled experiments important?', back: 'They isolate variables so we can accurately determine the cause of an observed change.' },
+        { front: 'How do scientific theories develop?', back: 'Through repeated experimentation, evidence gathering, and peer verification.' }
       ]
     }
   }
   if (mode === 'activity') {
+    if (isSocial) {
+      return {
+        activities: [
+          {
+            title: `Community Exploration: ${title}`,
+            materials: ['Notebook', 'Pen', 'Map or Chart Paper'],
+            steps: [
+              'Identify a real-world example related to this topic in your local area.',
+              'Interview an elder or collect 3 observations about how it affects daily life.',
+              'Create a simple timeline or chart summarizing your findings.'
+            ],
+            safety: 'Always conduct interviews and field observations with guardian awareness.',
+            whatWeSee: 'Local observations help connect textbook concepts to lived experiences.'
+          }
+        ]
+      }
+    }
     return {
       activities: [
         {
           title: `Hands-on Exploration: ${title}`,
-          materials: ['Clean test tube', 'Beaker', 'Water', 'Sample material', 'Safety tongs'],
+          materials: ['Notebook', 'Measuring ruler or cup', 'Water', 'Sample material'],
           steps: [
-            'Take a clean test tube and add the sample material.',
-            'Slowly add water or the testing solution drop by drop.',
-            'Observe any change in color, state, or bubbles forming.',
-            'Touch the bottom of the container carefully to feel any temperature change.'
+            'Observe the initial properties of the material and record them.',
+            'Introduce one test condition (e.g., adding water or observing motion).',
+            'Carefully record any changes in state, measurement, or behavior.'
           ],
-          safety: 'Wear safety goggles. Handle glassware and chemicals under adult supervision.',
-          whatWeSee: 'Observable changes such as temperature rise or precipitate formation indicate that a reaction has taken place.'
+          safety: 'Handle materials with care and wash hands after the experiment.',
+          whatWeSee: 'Systematic observation verifies how principles described in the book work in practice.'
         }
       ]
     }
   }
   // Default: exercises
+  if (isSocial) {
+    return {
+      items: [
+        {
+          q: `Explain the main idea and significance of ${title}${sec ? ` (Section ${sec})` : ''}.`,
+          hint: 'Consider why this topic was introduced and what changes it discusses.',
+          answer: `The topic explains how ${title} influences human society, resources, or historical development.`,
+          steps: [
+            'State the definition or background context.',
+            'Identify 2 key factors or impacts discussed in the chapter.',
+            'Summarize the broader significance for citizens.'
+          ]
+        },
+        {
+          q: `Give two real-world examples illustrating the principles in ${title}.`,
+          hint: 'Think about current events or familiar historical/geographical examples.',
+          answer: 'Real-world examples show how people, resources, and institutions continuously interact and adapt.',
+          steps: [
+            'Select two distinct situations.',
+            'Apply the concepts learned in this section to each situation.',
+            'Conclude with the lesson learned.'
+          ]
+        }
+      ]
+    }
+  }
   return {
     items: [
       {
         q: `What is the primary concept explained in ${title}${sec ? ` (Section ${sec})` : ''}?`,
         hint: 'Think about the central definition given at the beginning of the section.',
-        answer: 'The primary concept establishes how substances interact and transform according to standard scientific principles.',
+        answer: `The primary concept establishes the foundational rules and scientific principles of ${title}.`,
         steps: [
-          'Identify the starting materials and conditions described.',
-          'Recall the definition and law governing the transformation.',
+          'Identify the starting observations described.',
+          'Recall the scientific principle or law governing the topic.',
           'Formulate the final explanation clearly.'
         ]
       },
       {
-        q: 'Why must chemical equations be balanced in accordance with the law of conservation of mass?',
-        hint: 'Recall what happens to atoms during a chemical change.',
-        answer: 'Mass can neither be created nor destroyed in a chemical reaction. Therefore, the total number of atoms of each element must remain the same on both reactant and product sides.',
+        q: 'How does the scientific method help us verify these concepts?',
+        hint: 'Recall the sequence: observation, hypothesis, experiment, and conclusion.',
+        answer: 'By formulating testable questions and gathering repeatable experimental evidence.',
         steps: [
-          'State the law of conservation of mass.',
-          'Relate mass to the number of atoms of each element.',
-          'Conclude that coefficients are adjusted so both sides have equal atoms.'
-        ]
-      },
-      {
-        q: 'Distinguish between exothermic and endothermic reactions with one example of each.',
-        hint: 'Think about whether heat is released or absorbed.',
-        answer: 'Exothermic reactions release heat (e.g. burning of natural gas or respiration), whereas endothermic reactions absorb energy (e.g. thermal decomposition of limestone).',
-        steps: [
-          'Define exothermic reactions (heat given out).',
-          'Define endothermic reactions (energy absorbed).',
-          'Provide one standard textbook example for each.'
-        ]
-      },
-      {
-        q: 'What observable signs indicate that a chemical reaction has taken place?',
-        hint: 'Recall the 4 common indicators seen in laboratory activities.',
-        answer: 'The key indicators are: change in state, change in colour, evolution of a gas, and change in temperature.',
-        steps: [
-          'Recall laboratory observations with magnesium ribbon and zinc granules.',
-          'List physical changes (state, color).',
-          'List energy and gas changes (temperature, bubbling).'
+          'State the role of observation and questioning.',
+          'Explain how testing verifies or refutes hypotheses.',
+          'Summarize why evidence is required.'
         ]
       }
     ]

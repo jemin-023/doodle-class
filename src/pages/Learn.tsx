@@ -12,7 +12,7 @@ import { getPack, savePack, type OfflineAudioClip } from '../lib/offline'
 import { getSettings } from '../lib/settings'
 import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
-import { saveResume, clearResume, setSectionProgress } from '../lib/resume'
+import { saveResume, clearResume, setSectionProgress, getSectionProgress } from '../lib/resume'
 import './pages.css'
 import './learn-extra.css'
 import { DoodleScatter } from '../components/Doodles/Doodles'
@@ -223,8 +223,14 @@ export default function Learn() {
     if (finished) {
       clearResume()
       if (ncert) setSectionProgress(ncert.file, ncert.sec, 'done')
+    } else if (ncert && steps.length > 0) {
+      const all = getSectionProgress()
+      const k = `${ncert.file}|${ncert.sec || '*'}`
+      if (!all[k] || (all[k].status !== 'mastered' && all[k].status !== 'done')) {
+        setSectionProgress(ncert.file, ncert.sec, 'learning')
+      }
     }
-  }, [finished, ncert])
+  }, [finished, ncert, steps.length])
 
   // B1: Save resume point whenever step changes
   useEffect(() => {

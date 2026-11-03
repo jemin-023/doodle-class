@@ -66,7 +66,7 @@ export function lookupChapter(file) {
   for (const c of catalog.classes || []) for (const s of c.subjects) for (const b of s.books) {
     if (!file.startsWith(b.code)) continue
     const ch = b.chapters.find((x) => x.file === file)
-    if (ch) return { grade: c.grade, subject: s.name, book: b.title, n: ch.n, title: ch.title }
+    if (ch) return { grade: c.grade, subject: s.name, book: b.title, n: ch.n, title: ch.title, sections: ch.sections }
   }
   return null
 }
@@ -90,7 +90,17 @@ export async function getChapter(file) {
   const meta = lookupChapter(file); if (!meta) throw new Error('ncert: unknown chapter')
   const hit = MEM.get(file); if (hit) return hit
   let p = INFLIGHT.get(file)
-  if (!p) { p = load(file, meta).then((ch) => { const v = { ...ch, grade: meta.grade, subject: meta.subject, book: meta.book }; MEM.set(file, v); if (MEM.size > 40) MEM.delete(MEM.keys().next().value); return v }).finally(() => INFLIGHT.delete(file)); INFLIGHT.set(file, p) }
+  if (!p) {
+    p = load(file, meta).then((ch) => {
+      const isGeneric = !ch.title || /^chapter\s+\d+$/i.test(ch.title) || /notes for/i.test(ch.title) || /^section\s+[ivx]/i.test(ch.title)
+      const cleanTitle = (meta.title && (isGeneric || meta.title !== ch.title)) ? meta.title : (ch.title || meta.title)
+      const v = { ...ch, title: cleanTitle, grade: meta.grade, subject: meta.subject, book: meta.book }
+      MEM.set(file, v)
+      if (MEM.size > 40) MEM.delete(MEM.keys().next().value)
+      return v
+    }).finally(() => INFLIGHT.delete(file))
+    INFLIGHT.set(file, p)
+  }
   return p
 }
 
