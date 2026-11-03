@@ -291,6 +291,8 @@ export default function Home() {
           <Link to="/profile">Profile</Link>
           <Link to="/syllabus">Upload syllabus</Link>
           <Link to="/join">Join a class</Link>
+          <Link to="/speak-practice">Speaking practice</Link>
+          <Link to="/about">About</Link>
         </nav>
 
         {history.length > 0 && (

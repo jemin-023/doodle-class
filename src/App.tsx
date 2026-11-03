@@ -20,6 +20,8 @@ import Notebooks from './pages/Notebooks'
 import NotebookPage from './pages/NotebookPage'
 import SharedNotebook from './pages/SharedNotebook'
 import About from './pages/About'
+import BookPractice from './pages/BookPractice'
+import SpeakPractice from './pages/SpeakPractice'
 export default function App() {
   return (
     <>
@@ -39,6 +41,8 @@ export default function App() {
       <Route path="/notebook/:id" element={<NotebookPage />} />
       <Route path="/nb/:code" element={<SharedNotebook />} />
       <Route path="/about" element={<About />} />
+      <Route path="/book-practice" element={<BookPractice />} />
+      <Route path="/speak-practice" element={<SpeakPractice />} />
       <Route path="/snap" element={<Snap />} />
       <Route path="/family-voice" element={<FamilyVoice />} />
       <Route path="/parent" element={<ParentReport />} />
