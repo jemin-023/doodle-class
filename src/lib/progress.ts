@@ -51,3 +51,8 @@ export function getHistory(): TopicRecord[] {
 export function getTotalStars(): number {
   return load().reduce((s, r) => s + (r.stars || 0), 0)
 }
+
+// ---- CONTRACT STUBS (round 2) — Agent J implements ----
+export interface AnswerRecord { topic: string; characterId: string; questionId: string; prompt: string; answer: string; correct: boolean; at: number; language?: string }
+/** Called by the quiz after every answer. Feeds mastery + spaced-repetition review queue. */
+export function recordAnswer(_r: Omit<AnswerRecord, 'at'>): void {}

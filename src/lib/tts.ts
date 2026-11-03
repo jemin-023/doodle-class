@@ -94,3 +94,7 @@ export async function speak(text: string, opts: Opts): Promise<void> {
   if (chunks) return playChunks(chunks, myGen)
   return browserSpeak(text, opts.language, myGen)
 }
+
+// ---- CONTRACT STUB (round 2) — Agent I implements ----
+/** Fetch + cache TTS audio for text ahead of time so the next step plays instantly. Fire-and-forget. */
+export function prefetchSpeech(_text: string, _opts: { speaker: string; language: LanguageCode }): void {}

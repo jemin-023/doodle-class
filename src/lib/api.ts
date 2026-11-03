@@ -31,3 +31,10 @@ export async function generateQuiz(req: QuizRequest): Promise<Quiz> {
     return match(SAMPLE_QUIZZES, req.topic)
   }
 }
+
+// ---- CONTRACT STUBS (round 2) — Agent I implements streamLesson + askTeacher ----
+export interface AskRequest { question: string; lesson: import('../types').Lesson; characterId: string; language: import('../types').LanguageCode; grade: number }
+/** Student doubt -> one extra LessonStep (say + board items) answering it. */
+export async function askTeacher(_req: AskRequest): Promise<import('../types').LessonStep> { throw new Error('stub') }
+/** Streams lesson steps as the LLM produces them (NDJSON over /api/lesson-stream). Falls back to generateLesson. Resolves with full lesson. */
+export async function streamLesson(_req: LessonRequest, _h: { onStep: (step: import('../types').LessonStep, index: number) => void; onMeta?: (m: { topic: string; subject: string }) => void; signal?: AbortSignal }): Promise<Lesson> { throw new Error('stub') }
