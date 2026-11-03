@@ -1,0 +1,20 @@
+.pa-wrap { max-width: 760px; }
+.pa-label { font-family: var(--font-hand); font-size: 1.4rem; color: var(--ink-soft); margin: var(--sp-3) 0 6px; }
+.pa-card { margin-top: var(--sp-4); padding: var(--sp-3) !important; }
+.pa-text { font-family: var(--font-body); font-size: clamp(1.25rem, 4.2vw, 1.6rem); line-height: 1.7; margin: 8px 0 var(--sp-3); }
+.pa-big { font-family: var(--font-hand); font-size: 1.9rem; margin: 0 0 8px; }
+.pa-empty { margin-top: var(--sp-4); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: var(--sp-4) var(--sp-3) !important; }
+.pa-wait { font-family: var(--font-hand); font-size: 1.5rem; color: var(--ink-soft); margin: 8px 0; }
+.pa-err { color: var(--bad); margin: 8px 0; }
+.pa-demo { margin-top: var(--sp-3); padding: 6px 12px; display: inline-block; background: var(--highlight); border: 2px solid var(--ink); transform: rotate(-.6deg); font-size: .95rem; }
+.pa-demo button { background: none; border: 0; text-decoration: underline; font: inherit; color: var(--ink); cursor: pointer; min-height: 44px; padding: 0 6px; }
+.pa-vwrap { border-top: 2px dashed var(--ink-faint); padding-top: var(--sp-3); }
+.pa-voice { display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; background: color-mix(in srgb, var(--marker-green) 14%, var(--board)); border: 2px solid var(--ink); border-radius: 30px 10px 28px 12px / 12px 28px 10px 30px; max-width: 460px; }
+.pa-play { flex: none; width: 48px; height: 48px; display: grid; place-items: center; color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: 50% 46% 52% 48%; cursor: pointer; }
+.pa-play:hover { background: var(--highlight); }
+.pa-play:focus-visible, .pa-dl:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
+.pa-wave { flex: 1; min-width: 0; height: 44px; }
+.pa-dur { flex: none; min-width: 40px; text-align: right; font-family: var(--font-hand); font-size: 1.4rem; }
+.pa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: var(--sp-3); }
+.pa-dl { display: inline-flex; align-items: center; min-height: 44px; font-family: var(--font-hand); font-size: 1.5rem; color: var(--ink); text-decoration: none; border-bottom: 3px solid var(--highlight); }
+.pa-dl:hover { border-bottom-color: var(--marker-orange); }

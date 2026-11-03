@@ -1,0 +1,18 @@
+.ls-root { position: relative; display: inline-block; max-width: 100%; }
+.ls-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 14px; font: 600 1rem var(--font-body); color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px; transform: rotate(-.8deg); cursor: pointer; box-shadow: var(--shadow); }
+.ls-chip:hover:not(:disabled) { background: var(--highlight); }
+.ls-chip:disabled { opacity: .55; cursor: not-allowed; }
+.ls-chip:focus-visible, .ls-opt:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
+.ls-lbl { color: var(--ink-soft); font-weight: 400; }
+.ls-cur { font-family: var(--font-hand); font-size: 1.35rem; line-height: 1; }
+.ls-hint, .ls-err { font-size: .8rem; color: var(--ink-faint); margin-top: 4px; }
+.ls-err { color: var(--bad); }
+.ls-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ls-pop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: min(300px, calc(100vw - 32px)); display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px; background: var(--board); border: 2px solid var(--ink); border-radius: 3px 8px 4px 6px; box-shadow: 4px 5px 0 rgba(35,33,30,.14); }
+.ls-pop::before { content: ''; position: absolute; top: -10px; left: 24px; width: 64px; height: 18px; background: var(--tape); transform: rotate(-3deg); }
+.ls-opt { min-height: 44px; padding: 4px 8px; font-family: var(--font-hand); font-size: 1.4rem; color: var(--ink); background: var(--paper); border: 2px solid var(--ink-faint); border-radius: 14px 4px 12px 5px / 5px 12px 4px 14px; cursor: pointer; }
+.ls-opt:hover:not(:disabled), .ls-opt:focus-visible { background: var(--highlight); border-color: var(--ink); }
+.ls-opt.is-cur { border-color: var(--ink); background: color-mix(in srgb, var(--marker-green) 20%, var(--board)); }
+.ls-opt.is-busy { font-size: 1rem; font-family: var(--font-body); }
+.ls-opt:disabled { opacity: .6; cursor: progress; }
+.ls-pop .ls-err { grid-column: 1 / -1; }
