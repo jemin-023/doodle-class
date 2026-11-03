@@ -1,0 +1,267 @@
+/* Mind Map Studio Tool — Doodle Class sketchbook theme */
+
+.mm-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Toolbar */
+.mm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mm-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 14px;
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+  box-shadow: 1px 2px 0 rgba(35, 33, 30, 0.1);
+  transition: transform 0.1s ease, background 0.15s ease;
+  user-select: none;
+}
+
+.mm-btn:hover:not(:disabled) {
+  background: var(--highlight);
+  transform: translateY(-1px);
+}
+
+.mm-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.mm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mm-btn.is-primary {
+  background: var(--paper-2);
+  border-color: var(--ink);
+}
+
+.mm-btn.is-export {
+  color: #fff;
+  background: var(--marker-blue);
+  border-color: var(--ink);
+}
+
+.mm-btn.is-export:hover:not(:disabled) {
+  background: #244eb5;
+  color: #fff;
+}
+
+/* Canvas viewport container */
+.mm-canvas-card {
+  position: relative;
+  width: 100%;
+  height: clamp(380px, 62vh, 620px);
+  background: var(--board);
+  background-image: radial-gradient(var(--rule) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  box-shadow: 2px 3px 0 rgba(35, 33, 30, 0.12);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.mm-canvas-card.is-dragging {
+  cursor: grabbing;
+}
+
+.mm-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* SVG Node text & badges */
+.mm-node-text {
+  font-family: var(--font-hand);
+  font-size: 16px;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mm-node-root-text {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.mm-node-badge {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.mm-node-badge:hover circle {
+  fill: var(--highlight);
+}
+
+.mm-node-badge text {
+  font-family: var(--font-hand);
+  font-size: 14px;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+/* Help (?) button on nodes */
+.mm-ask-btn {
+  cursor: pointer;
+}
+
+.mm-ask-btn circle {
+  fill: #fff7d6;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  transition: transform 0.15s ease, fill 0.15s ease;
+}
+
+.mm-ask-btn:hover circle {
+  fill: var(--highlight);
+  transform-origin: center;
+}
+
+.mm-ask-btn text {
+  font-family: var(--font-hand);
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+/* Node item hover feedback */
+.mm-node-g {
+  cursor: pointer;
+}
+
+.mm-node-g:hover .mm-node-text {
+  fill: var(--marker-blue);
+}
+
+.mm-node-g.is-leaf:hover .mm-node-text {
+  fill: var(--marker-red);
+}
+
+/* Footer hint */
+.mm-foot-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--paper-2);
+  border: 1px dashed var(--ink-faint);
+  border-radius: var(--radius);
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+.mm-foot-hint span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Loading & Empty states */
+.mm-loading-state,
+.mm-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  padding: 32px 16px;
+  text-align: center;
+  background: var(--board);
+  border: 2px dashed var(--ink-faint);
+  border-radius: 6px;
+}
+
+.mm-doodle-icon {
+  font-size: 2.8rem;
+  margin-bottom: 12px;
+  animation: dc-bounce 1s infinite alternate;
+}
+
+.mm-loading-title {
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.mm-loading-blurb {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  max-width: 380px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .mm-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mm-btn-group {
+    justify-content: space-between;
+  }
+  .mm-btn {
+    flex: 1;
+    min-width: 44px;
+    padding: 6px 8px;
+    font-size: 1rem;
+  }
+  .mm-canvas-card {
+    height: 390px;
+  }
+  .mm-foot-hint {
+    flex-direction: column;
+    align-items: flex-start;
+    font-size: 0.95rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-doodle-icon {
+    animation: none !important;
+  }
+  .mm-btn {
+    transition: none !important;
+  }
+}
