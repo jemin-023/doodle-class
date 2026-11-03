@@ -14,6 +14,15 @@
 .cl-setup { max-width: 760px; }
 .cl-codein input { font-family: var(--font-hand); font-size: 3.4rem; letter-spacing: .3em; text-align: center; text-transform: uppercase; }
 
+/* setup source modes */
+.cl-setup-modes { display: flex; gap: 8px; margin-bottom: 12px; }
+.cl-mode-btn { background: var(--board); border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; padding: 8px 18px; font-family: var(--font-hand); font-size: 1.6rem; font-weight: 700; color: var(--ink); cursor: pointer; transition: background 0.15s; }
+.cl-mode-btn.is-on { background: var(--highlight); border-width: 3px; }
+.cl-setup-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.cl-ncert-picker { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.cl-select { width: 100%; font: 700 1.25rem var(--font-body); padding: 10px 14px; background: var(--board); border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; color: var(--ink); cursor: pointer; }
+.cl-select:focus { outline: 3px dashed var(--ink); outline-offset: 2px; }
+
 /* lobby */
 .cl-lobby { display: grid; grid-template-columns: minmax(280px, 460px) 1fr; gap: 40px; align-items: start; }
 .cl-joincard { text-align: center; }
@@ -79,6 +88,60 @@ button.cl-opt:focus-visible { outline: 3px dashed var(--ink); outline-offset: 3p
 .cl-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .cl-confetti i { position: absolute; top: -30px; animation: cl-fall 4.5s linear infinite; }
 
+/* Check-in Host Tally */
+.cl-ci-tally-box { margin-top: 20px; text-align: left; width: 100%; max-width: 640px; }
+.cl-ci-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cl-ci-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+.cl-ci-col { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; background: var(--board); }
+.cl-ci-col.up { border-color: var(--ok); }
+.cl-ci-col.mid { border-color: var(--marker-orange); }
+.cl-ci-col.down { border-color: var(--bad); }
+.cl-ci-label { font-family: var(--font-hand); font-size: 1.5rem; font-weight: 700; }
+.cl-ci-count { font-family: var(--font-hand); font-size: 2.8rem; line-height: 1; }
+.cl-ci-pct { font-size: 1.1rem; color: var(--ink-soft); }
+
+/* Check-in Student (Phone) */
+.cl-student-checkin { margin-bottom: 16px; width: 100%; }
+.cl-checkin-box { text-align: center; }
+.cl-ci-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
+.cl-ci-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 80px; padding: 10px 4px; background: var(--board); border: 2px solid var(--ink); border-radius: 12px; font: 700 1.1rem var(--font-body); color: var(--ink); cursor: pointer; transition: transform 0.1s, background 0.15s; }
+.cl-ci-btn:active { transform: translateY(2px); }
+.cl-ci-btn.up.is-on { background: color-mix(in srgb, var(--ok) 18%, var(--board)); border-color: var(--ok); border-width: 3px; }
+.cl-ci-btn.mid.is-on { background: color-mix(in srgb, var(--marker-orange) 18%, var(--board)); border-color: var(--marker-orange); border-width: 3px; }
+.cl-ci-btn.down.is-on { background: color-mix(in srgb, var(--bad) 18%, var(--board)); border-color: var(--bad); border-width: 3px; }
+
+/* Homework Mode */
+.cl-hw-pill { font-family: var(--font-hand); font-size: 1.3rem; font-weight: 700; padding: 2px 10px; border: 2px dashed var(--marker-blue); border-radius: 8px; color: var(--marker-blue); background: var(--paper-2); }
+.cl-hw-badge { display: inline-block; font-family: var(--font-hand); font-size: 1.6rem; font-weight: 700; background: var(--highlight); padding: 4px 14px; border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; margin-bottom: 8px; }
+.cl-hw-host { display: flex; flex-direction: column; gap: 32px; width: 100%; }
+.cl-hw-hero { display: grid; grid-template-columns: minmax(280px, 440px) 1fr; gap: 40px; align-items: start; }
+.cl-hw-linkbox { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.cl-hw-link { font-size: 1rem; font-family: monospace; word-break: break-all; padding: 6px 10px; background: var(--paper); border: 1px dashed var(--ink-faint); border-radius: 6px; }
+
+/* Teacher Dashboard */
+.cl-dashboard { width: 100%; margin-top: 36px; display: flex; flex-direction: column; gap: 24px; text-align: left; }
+.cl-dash-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; border-bottom: 2px dashed var(--ink-faint); padding-bottom: 12px; }
+.cl-dash-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.cl-card-title { font-family: var(--font-hand); font-size: 2rem; margin: 0 0 10px; }
+.cl-help-card { width: 100%; }
+.cl-all-good { font-size: 1.3rem; color: var(--ok); font-weight: 700; margin: 4px 0; }
+.cl-struggling-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.cl-struggling-item { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--board)); padding: 4px 12px 4px 6px; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; font-weight: 700; font-size: 1.15rem; }
+.cl-strug-acc { color: var(--bad); font-family: var(--font-hand); font-size: 1.5rem; margin-left: 4px; }
+.cl-q-stats { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.cl-q-list { display: flex; flex-direction: column; gap: 14px; }
+.cl-q-stat-card { width: 100%; }
+.cl-q-stat-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.cl-pill.sm { font-size: 1.4rem; padding: 0 10px; }
+.cl-acc-tag { font-family: var(--font-hand); font-size: 1.8rem; }
+.cl-q-stat-prompt { font-size: 1.35rem; font-weight: 700; margin: 6px 0 10px; line-height: 1.25; }
+.cl-stat-bar-track { display: flex; align-items: center; min-height: 24px; border: 2px solid var(--ink); border-radius: 8px; padding: 2px; background: var(--board); margin-bottom: 10px; }
+.cl-stat-bar-fill { height: 18px; border-radius: 5px; transition: width 0.4s ease-out; }
+.cl-stat-details { display: flex; flex-direction: column; gap: 4px; font-size: 1.15rem; }
+.cl-correct-hint { display: flex; align-items: center; gap: 6px; color: var(--ok); font-weight: 700; }
+.cl-wrong-hint { display: flex; align-items: center; gap: 6px; color: var(--bad); font-weight: 700; }
+.cl-wrong-hint.ok { color: var(--ink-soft); font-weight: normal; }
+
 /* join (phone) */
 .cl-join { max-width: 560px; }
 .cl-center { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 10px; }
@@ -95,7 +158,8 @@ button.cl-opt:focus-visible { outline: 3px dashed var(--ink); outline-offset: 3p
 @keyframes cl-fall { to { transform: translateY(110vh) rotate(360deg); } }
 
 @media (max-width: 900px) {
-  .cl-lobby, .cl-reveal { grid-template-columns: 1fr; gap: 24px; }
+  .cl-lobby, .cl-reveal, .cl-hw-hero { grid-template-columns: 1fr; gap: 24px; }
+  .cl-ci-cols { grid-template-columns: 1fr; }
   .cl-opts { grid-template-columns: 1fr; }
   .cl-opt { min-height: 72px; }
 }
