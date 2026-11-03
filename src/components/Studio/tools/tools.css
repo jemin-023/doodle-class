@@ -1,0 +1,523 @@
+/* Studio Tools Styles — Sketchbook Theme */
+
+/* Container */
+.st-tool-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Header & Controls bar */
+.st-tool-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--paper-2);
+  border: 1.5px dashed var(--ink-faint);
+  border-radius: var(--radius);
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+}
+
+.st-tool-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.st-tool-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Doodle Loader */
+.st-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+  gap: 12px;
+}
+
+.st-loader-icon {
+  width: 56px;
+  height: 56px;
+  animation: dc-bounce 0.8s ease-in-out infinite;
+  color: var(--marker-blue);
+}
+
+.st-loader-title {
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.st-loader-sub {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  max-width: 380px;
+}
+
+/* Error & Empty States */
+.st-state-card {
+  text-align: center;
+  padding: 32px 20px;
+  background: var(--paper-2);
+  border: 2px dashed var(--ink-faint);
+  border-radius: 8px;
+}
+
+.st-state-card h4 {
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+}
+
+.st-state-card p {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  margin: 0 0 16px;
+}
+
+/* ========================================================
+   FLASHCARDS (3D Flip & Reduced-motion Fade)
+   ======================================================== */
+.st-fc-scene {
+  perspective: 1000px;
+  width: 100%;
+  min-height: 270px;
+  cursor: pointer;
+  outline: none;
+}
+
+.st-fc-card {
+  position: relative;
+  width: 100%;
+  min-height: 270px;
+  border-radius: 8px;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+}
+
+.st-fc-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.st-fc-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 18px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 3px 4px 0 rgba(35, 33, 30, 0.14);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  box-sizing: border-box;
+}
+
+.st-fc-back {
+  transform: rotateY(180deg);
+  background: #fdfaf3;
+  border-color: var(--marker-blue);
+  box-shadow: 3px 4px 0 rgba(47, 95, 208, 0.2);
+}
+
+.st-fc-badge {
+  align-self: flex-start;
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1.5px solid currentColor;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.st-fc-front .st-fc-badge {
+  color: var(--marker-orange);
+}
+
+.st-fc-back .st-fc-badge {
+  color: var(--marker-blue);
+}
+
+.st-fc-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px 6px;
+}
+
+.st-fc-prompt {
+  font-family: var(--font-hand);
+  font-size: clamp(1.4rem, 4.5vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.st-fc-answer {
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 3.2vw, 1.2rem);
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.st-fc-hint {
+  align-self: center;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Reduced motion preference: simple fade instead of 3D flip */
+@media (prefers-reduced-motion: reduce) {
+  .st-fc-scene {
+    perspective: none;
+  }
+  .st-fc-card {
+    transition: none !important;
+    transform: none !important;
+  }
+  .st-fc-face {
+    position: relative;
+    transition: opacity 0.2s ease;
+  }
+  .st-fc-card:not(.is-flipped) .st-fc-back {
+    display: none !important;
+  }
+  .st-fc-card.is-flipped .st-fc-front {
+    display: none !important;
+  }
+  .st-fc-card.is-flipped .st-fc-back {
+    display: flex !important;
+    transform: none !important;
+  }
+}
+
+/* Flashcard Action Buttons */
+.st-fc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.st-fc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 14px;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  cursor: pointer;
+  box-shadow: 2px 3px 0 var(--ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.st-fc-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.st-fc-btn-again {
+  background: #fde8e4;
+  border-color: var(--marker-red);
+  color: var(--marker-red);
+  box-shadow: 2px 3px 0 var(--marker-red);
+}
+
+.st-fc-btn-again:active {
+  box-shadow: 0 1px 0 var(--marker-red);
+}
+
+.st-fc-btn-knew {
+  background: #e6f6ec;
+  border-color: var(--marker-green);
+  color: var(--marker-green);
+  box-shadow: 2px 3px 0 var(--marker-green);
+}
+
+.st-fc-btn-knew:active {
+  box-shadow: 0 1px 0 var(--marker-green);
+}
+
+.st-fc-secondary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+/* ========================================================
+   QUIZ STYLES
+   ======================================================== */
+.st-quiz-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.st-quiz-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+}
+
+.st-quiz-prompt-box {
+  padding: 16px 18px;
+  background: var(--board);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 2px 3px 0 var(--ink);
+}
+
+.st-quiz-prompt {
+  font-family: var(--font-hand);
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 0;
+}
+
+.st-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.st-quiz-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 10px 14px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+  box-shadow: 2px 2px 0 rgba(35, 33, 30, 0.1);
+}
+
+.st-quiz-option:hover:not(:disabled) {
+  background: var(--paper-2);
+  transform: translateY(-1px);
+}
+
+.st-quiz-option.is-selected {
+  background: var(--highlight);
+  font-weight: 700;
+}
+
+.st-quiz-option.is-correct {
+  background: #e6f6ec !important;
+  border-color: var(--marker-green) !important;
+  color: var(--marker-green) !important;
+  font-weight: 700;
+}
+
+.st-quiz-option.is-incorrect {
+  background: #fde8e4 !important;
+  border-color: var(--marker-red) !important;
+  color: var(--marker-red) !important;
+}
+
+.st-quiz-option:disabled {
+  cursor: default;
+}
+
+.st-quiz-explanation {
+  padding: 12px 16px;
+  background: var(--paper-2);
+  border-left: 4px solid var(--marker-blue);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  animation: dc-pop-in 0.2s ease-out;
+}
+
+.st-quiz-explanation-head {
+  font-family: var(--font-hand);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--marker-blue);
+  margin-bottom: 2px;
+}
+
+/* ========================================================
+   SUMMARY / FINISHED SCREEN (Cards & Quiz)
+   ======================================================== */
+.st-summary-wrap {
+  text-align: center;
+  padding: 24px 16px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 3px 4px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.st-summary-title {
+  font-family: var(--font-hand);
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink);
+}
+
+.st-summary-badge {
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+  font-weight: 700;
+  padding: 4px 18px;
+  background: var(--highlight);
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  transform: rotate(-1deg);
+}
+
+.st-summary-text {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  max-width: 440px;
+  margin: 0;
+}
+
+.st-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* ========================================================
+   LESSON / TEACH ME ON THE BOARD
+   ======================================================== */
+.st-lesson-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.st-lesson-intro {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.st-teacher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.st-teacher-card {
+  padding: 14px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  position: relative;
+}
+
+.st-teacher-card:hover {
+  background: var(--paper-2);
+  transform: translateY(-2px);
+}
+
+.st-teacher-card.is-selected {
+  border-color: var(--marker-blue);
+  background: var(--board);
+  box-shadow: 3px 3px 0 var(--marker-blue);
+}
+
+.st-teacher-name {
+  font-family: var(--font-hand);
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.st-teacher-subj {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--marker-orange);
+  text-transform: uppercase;
+}
+
+.st-teacher-tagline {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.st-lesson-meta-card {
+  padding: 12px 14px;
+  background: var(--paper-2);
+  border: 1.5px dashed var(--ink-faint);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink-soft);
+}
+
+.st-lesson-meta-card b {
+  color: var(--ink);
+}
+
+.st-lesson-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
