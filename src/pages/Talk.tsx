@@ -43,6 +43,31 @@ export default function Talk() {
     document.addEventListener('visibilitychange', vis)
     return () => document.removeEventListener('visibilitychange', vis)
   }, [])
+  // Barge-in (hands-free): if the kid starts talking over the teacher, stop speaking; send()'s tail then re-opens the mic.
+  useEffect(() => {
+    if (!hands || phase !== 'talking' || !canMic) return
+    let stream: MediaStream | null = null, ctx: AudioContext | null = null, poll: ReturnType<typeof setInterval> | undefined, dead = false
+    void (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+        if (dead) { stream.getTracks().forEach(t => t.stop()); return }
+        ctx = new AudioContext()
+        const an = ctx.createAnalyser(); an.fftSize = 1024
+        ctx.createMediaStreamSource(stream).connect(an)
+        const buf = new Uint8Array(an.fftSize)
+        let loudSince = 0
+        const armedAt = Date.now() + 800     // ignore the first moments (speaker start-up noise)
+        poll = setInterval(() => {
+          an.getByteTimeDomainData(buf)
+          let s = 0; for (const v of buf) { const d = (v - 128) / 128; s += d * d }
+          const rms = Math.sqrt(s / buf.length), now = Date.now()
+          if (rms > 0.1 && now > armedAt) { if (!loudSince) loudSince = now; else if (now - loudSince > 350) { stopSpeaking() } }
+          else loudSince = 0
+        }, 50)
+      } catch { /* no mic: no barge-in */ }
+    })()
+    return () => { dead = true; if (poll) clearInterval(poll); stream?.getTracks().forEach(t => t.stop()); ctx?.close().catch(() => {}) }
+  }, [hands, phase, canMic])
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines])
 
   const mic = useCallback(async () => {

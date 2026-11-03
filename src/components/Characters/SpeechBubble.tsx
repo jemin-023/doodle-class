@@ -1,5 +1,16 @@
 import './characters.css'
 
+/** Narration should be plain words, but models sometimes leak LaTeX; show it as readable maths. */
+export function plainSay(t: string): string {
+  return t.replace(/\*\*/g, '')
+    .replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2')
+    .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√$1')
+    .replace(/\\(times|cdot)/g, '×').replace(/\\div/g, '÷').replace(/\\pm/g, '±')
+    .replace(/\\(le|leq)\b/g, '≤').replace(/\\(ge|geq)\b/g, '≥').replace(/\\neq\b/g, '≠').replace(/\\pi\b/g, 'π')
+    .replace(/\^\{?2\}?/g, '²').replace(/\^\{?3\}?/g, '³')
+    .replace(/\\[a-zA-Z]+/g, '').replace(/[{}$]/g, '').replace(/\s+/g, ' ').trim()
+}
+
 export interface SpeechBubbleProps { text: string; side?: 'left' | 'right'; typing?: boolean }
 
 export default function SpeechBubble({ text, side = 'left', typing = false }: SpeechBubbleProps) {
@@ -12,7 +23,7 @@ export default function SpeechBubble({ text, side = 'left', typing = false }: Sp
       {typing ? (
         <span className="sb-dots" aria-label="typing"><i /><i /><i /></span>
       ) : (
-        <span className="sb-text" key={text}>{text.replace(/\*\*/g, "")}</span>
+        <span className="sb-text" key={text}>{plainSay(text)}</span>
       )}
     </div>
   )

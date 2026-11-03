@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { onSpeechLevel } from '../../lib/tts'
 import type { Mood } from '../../types'
 import './characters.css'
 
@@ -11,6 +13,24 @@ const HATCH = { fill: 'none', stroke: INK, strokeWidth: 2, strokeLinecap: 'round
 
 interface FaceSpec { lx: number; ly: number; rx: number; ry: number; mx: number; my: number }
 interface Art { body: ReactNode; face: FaceSpec; tint: string; accent: string; crop: string; extra?: ReactNode }
+
+/** Mouth that follows the speech amplitude. Driven by refs from tts's rAF loop (no React state per frame). */
+function TalkMouth({ cx, cy }: { cx: number; cy: number }) {
+  const ref = useRef<SVGEllipseElement>(null)
+  useEffect(() => {
+    const m = ref.current
+    if (!m || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)) return
+    let cur = 0
+    const off = onSpeechLevel(l => {
+      cur = l > cur ? cur + (l - cur) * 0.7 : cur + (l - cur) * 0.35   // quick attack, softer release
+      m.style.animation = 'none'
+      m.setAttribute('ry', (1.4 + 7 * cur).toFixed(2))
+      m.setAttribute('rx', (5 + 2.5 * cur).toFixed(2))
+    })
+    return () => { off(); m.style.animation = ''; m.setAttribute('ry', '5.5'); m.setAttribute('rx', '6') }
+  }, [])
+  return <ellipse ref={ref} className="ch-mouth-t" cx={cx} cy={cy} rx="6" ry="5.5" fill="#8a2f22" stroke={INK} strokeWidth="2.5" />
+}
 
 function Face({ f, mood }: { f: FaceSpec; mood: Mood }) {
   const { lx, ly, rx, ry, mx, my } = f
@@ -43,7 +63,7 @@ function Face({ f, mood }: { f: FaceSpec; mood: Mood }) {
     </g>
   )
   let mouth: ReactNode
-  if (mood === 'talking') mouth = <ellipse className="ch-mouth-t" cx={mx} cy={my} rx="6" ry="5.5" fill="#8a2f22" stroke={INK} strokeWidth="2.5" />
+  if (mood === 'talking') mouth = <TalkMouth cx={mx} cy={my} />
   else if (mood === 'happy') mouth = <path d={`M${mx - 10} ${my - 3} Q${mx} ${my + 12} ${mx + 10} ${my - 3} Z`} fill="#fff" {...S} strokeWidth={2.5} />
   else if (mood === 'sad') mouth = <path d={`M${mx - 7} ${my + 4} Q${mx} ${my - 4} ${mx + 7} ${my + 4}`} {...T} strokeWidth={2.5} />
   else if (mood === 'thinking') mouth = <path d={`M${mx - 5} ${my + 1} Q${mx} ${my - 1} ${mx + 6} ${my - 1}`} {...T} strokeWidth={2.5} />

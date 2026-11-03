@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const { text, speaker, language } = parseBody(req)
     if (!text || typeof text !== 'string' || text.length > 4000) return res.status(400).json({ error: 'text required' })
     const audio = await tts(text, (typeof speaker === 'string' && /^[a-z]{2,20}$/i.test(speaker)) ? speaker.toLowerCase() : 'priya', cleanLang(language))
-    return res.status(200).json({ audio })
+    return res.status(200).json({ audio, mime: 'audio/mpeg' })
   } catch (e) {
     console.error('[tts]', e.message || e)
     return res.status(503).json({ error: 'tts unavailable' })

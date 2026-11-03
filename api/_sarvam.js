@@ -9,7 +9,7 @@ export function parseBody(req) {
   return b && typeof b === 'object' ? b : {}
 }
 
-const LANGS = ['en-IN', 'hi-IN', 'ta-IN', 'te-IN', 'kn-IN', 'mr-IN', 'bn-IN', 'gu-IN']
+const LANGS = ['en-IN', 'hi-IN', 'ta-IN', 'te-IN', 'kn-IN', 'mr-IN', 'bn-IN', 'gu-IN', 'ml-IN', 'od-IN', 'pa-IN']
 export function cleanLang(l) { return LANGS.includes(l) ? l : 'en-IN' }
 export function cleanGrade(g) { const n = Math.round(Number(g)); return n >= 1 && n <= 10 ? n : 5 }
 export function cleanTopic(t, def = 'Photosynthesis') { return String(t || def).replace(/\s+/g, ' ').trim().slice(0, 120) || def }
@@ -37,14 +37,14 @@ export function speakable(t) {
   return s.trim()
 }
 
-export async function chat(messages, { temperature = 0.4, max_tokens = 4000 } = {}) {
+export async function chat(messages, { temperature = 0.4, max_tokens = 4000, reasoning = null, timeout = 25000 } = {}) {
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
   const r = await fetchRetry('https://api.sarvam.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key, Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: CHAT_MODEL, messages, temperature, max_tokens, reasoning_effort: null }),
-  }, 25000)
+    body: JSON.stringify({ model: CHAT_MODEL, messages, temperature, max_tokens, reasoning_effort: reasoning }),
+  }, timeout)
   if (!r.ok) throw new Error(`sarvam chat ${r.status}`)
   const j = await r.json()
   return j?.choices?.[0]?.message?.content ?? ''
@@ -96,12 +96,43 @@ function chunkText(text, max = 450) {
   return out.filter(Boolean)
 }
 
-async function ttsOne(text, speaker, language, key) {
-  return fetch('https://api.sarvam.ai/text-to-speech', {
-    method: 'POST', signal: AbortSignal.timeout(15000),
-    headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
-    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3', output_audio_codec: 'mp3', speech_sample_rate: 16000, pace: 1.1, temperature: 0.8 }),
-  })
+// Character voices. Clients send the v3 speaker id; we map it to a character, then (character, language) to a bulbul:v4-flash persona.
+// null = no good v4 voice for that slot, use bulbul:v3 with the original speaker. Every id below was probed against the live API.
+const SPK_CHAR = { ishita: 'tara', varun: 'bolt', simran: 'mishri', dev: 'gajju' }
+const V4 = {
+  'hi-IN': { tara: 'ishita_hi_edtech', bolt: 'kunal_hi_kids', mishri: 'chhavi_hi_kids', gajju: 'mahesh_hi_documentary' },
+  'en-IN': { tara: 'aparna_en_edtech', bolt: 'kalpit_en_edtech', mishri: 'aditi_en_stories', gajju: 'girish_en_documentary' },
+  'mr-IN': { tara: 'neha_mr_narration', bolt: 'soham_mr_narration', mishri: 'rupali_mr_stories', gajju: 'mukul_mr_stories' },
+  'kn-IN': { tara: 'chaitra_kn_conversation', bolt: 'chetan_kn_conversation', mishri: 'suchitra_kn_narration', gajju: null },
+  'ta-IN': { tara: null, bolt: 'aravind_ta_ads', mishri: null, gajju: 'vijay_ta_narration' },
+  'te-IN': { tara: 'kavitha_te_conversation', bolt: 'tarun_te_narration', mishri: 'pooja_te_conversation', gajju: null },
+  'bn-IN': { tara: 'roopa_bn_conversational', bolt: 'arnab_bn_conversation', mishri: null, gajju: null },
+  'gu-IN': { tara: 'pooja_gu_conversational', bolt: 'bhavik_gu_conversation', mishri: 'pooja_gu_customer', gajju: null },
+  'pa-IN': { tara: null, bolt: 'anand_pa_conversation', mishri: null, gajju: null },
+}
+const CHAR_PACE = { tara: 1.0, bolt: 1.15, mishri: 1.1, gajju: 0.92 }
+export function voiceFor(speaker, language) {
+  const ch = SPK_CHAR[speaker]
+  const v4 = ch ? V4[language]?.[ch] : null
+  return { model: v4 ? 'bulbul:v4-flash' : 'bulbul:v3', speaker: v4 || speaker, pace: (ch && CHAR_PACE[ch]) || 1.1, v3speaker: speaker }
+}
+
+// v4 uses the HTTP-stream endpoint, buffered here: measured ~0.5s faster total than REST (see report). Returns base64 mp3 or throws.
+async function ttsOne(text, v, language, key) {
+  const v4 = v.model === 'bulbul:v4-flash'
+  const body = JSON.stringify({ text, target_language_code: language, language_code: language, speaker: v.speaker, model: v.model, output_audio_codec: 'mp3', speech_sample_rate: v4 ? 24000 : 16000, pace: v.pace, temperature: v4 ? 0.7 : 0.8 })
+  const headers = { 'Content-Type': 'application/json', 'api-subscription-key': key }
+  if (v4) {
+    try {
+      const r = await fetch('https://api.sarvam.ai/text-to-speech/stream', { method: 'POST', signal: AbortSignal.timeout(15000), headers, body })
+      if (r.ok) { const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 500) return buf.toString('base64') }
+    } catch { /* fall through to REST */ }
+  }
+  const r = await fetch('https://api.sarvam.ai/text-to-speech', { method: 'POST', signal: AbortSignal.timeout(15000), headers, body })
+  if (!r.ok) { const e = new Error(`sarvam tts ${r.status}`); e.status = r.status; throw e }
+  const j = await r.json()
+  if (!j?.audios?.[0]) throw new Error('tts: no audio')
+  return j.audios[0]
 }
 
 export async function tts(text, speaker = 'priya', language = 'en-IN') {
@@ -109,21 +140,24 @@ export async function tts(text, speaker = 'priya', language = 'en-IN') {
   if (!key) throw new Error('no SARVAM_API_KEY')
   const chunks = chunkText(speakable(text))
   if (!chunks.length) throw new Error('tts: empty text')
-  let spk = speaker
+  let v = voiceFor(speaker, language)
   const one = async c => {
-    let r = await ttsOne(c, spk, language, key)
-    if (!r.ok && spk !== 'priya') { spk = 'priya'; r = await ttsOne(c, spk, language, key) }
-    if (!r.ok) throw new Error(`sarvam tts ${r.status}`)
-    const j = await r.json()
-    if (!j?.audios?.[0]) throw new Error('tts: no audio')
-    return j.audios[0]
+    try { return await ttsOne(c, v, language, key) } catch (e) {
+      if (v.model === 'bulbul:v4-flash') { // v4 failed: retry on v3 with the original speaker
+        console.error('[tts] v4 failed', e.message, v.speaker, '-> v3')
+        v = { model: 'bulbul:v3', speaker: v.v3speaker, pace: v.pace, v3speaker: v.v3speaker }
+        try { return await ttsOne(c, v, language, key) } catch { /* try default speaker */ }
+      }
+      if (v.speaker === 'priya') throw e
+      v = { ...v, speaker: 'priya' }
+      return ttsOne(c, v, language, key)
+    }
   }
   return Promise.all(chunks.map(one))
 }
 
-export const BOARD_KINDS = ['title', 'text', 'bullet', 'equation', 'highlight', 'example', 'drawing']
-export const BOARD_SHAPES = ['circle', 'arrow', 'box', 'star', 'underline', 'divider']
-export const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati' }
+export { BOARD_KINDS, BOARD_SHAPES, BOARD_ITEM_SHAPES, sanitizeStep } from './_board.js'
+export const LANG_NAMES = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'kn-IN': 'Kannada', 'mr-IN': 'Marathi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati', 'ml-IN': 'Malayalam', 'od-IN': 'Odia', 'pa-IN': 'Punjabi' }
 export const CHAR_NAMES = { tara: 'Tara', bolt: 'Chintu', mishri: 'Mishri', gajju: 'Gajju' }
 export const CHAR_SUBJECTS = { tara: 'Maths', bolt: 'Science', mishri: 'English', gajju: 'History' }
 export const PERSONA = {
@@ -131,21 +165,6 @@ export const PERSONA = {
   bolt: 'Chintu the robot: curious, experiment-loving, says things like "let us test it and see".',
   mishri: 'Mishri the cat: playful storyteller who loves words.',
   gajju: 'Gajju the elephant: warm, remembers every fact, loves history stories.',
-}
-
-/** Returns a clean {say, board} or null. */
-export function sanitizeStep(s) {
-  const say = String(s?.say || '').trim()
-  const board = (Array.isArray(s?.board) ? s.board : []).map(b => {
-    if (!b || !BOARD_KINDS.includes(b.kind)) return null
-    if (b.kind === 'drawing') {
-      if (!BOARD_SHAPES.includes(b.shape)) return null
-      return b.label ? { kind: 'drawing', shape: b.shape, label: String(b.label).slice(0, 40) } : { kind: 'drawing', shape: b.shape }
-    }
-    const text = String(b.text || '').trim()
-    return text ? { kind: b.kind, text: text.slice(0, 120) } : null
-  }).filter(Boolean).slice(0, 4)
-  return say && board.length ? { say, board } : null
 }
 
 /** Streams chat completion content deltas (async generator of strings). */

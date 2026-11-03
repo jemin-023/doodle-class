@@ -8,6 +8,8 @@ export function sttSupported(): boolean {
 
 let stopFn: (() => void) | null = null
 export let lastSttError = ''
+/** Language code Sarvam detected for the last transcript (useful when language was 'unknown'). */
+export let lastSttLanguage = ''
 
 function toBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -19,13 +21,13 @@ function toBase64(blob: Blob): Promise<string> {
 }
 
 /** Records from mic until stopListening() or maxMs (default 6000), sends to /api/stt, resolves with transcript ('' on failure). */
-export async function listen(opts: { language: LanguageCode; maxMs?: number; onState?: (s: ListenState) => void }): Promise<string> {
-  const { language, maxMs = 6000, onState } = opts
+export async function listen(opts: { language: LanguageCode | 'unknown'; maxMs?: number; onState?: (s: ListenState) => void; mode?: 'transcribe' | 'codemix' | 'translate' | 'verbatim' | 'translit' }): Promise<string> {
+  const { language, maxMs = 6000, onState, mode } = opts
   let stream: MediaStream | null = null
   let ctx: AudioContext | null = null
-  lastSttError = ''
+  lastSttError = ''; lastSttLanguage = ''
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
     const mime = typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : ''
     const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
     const chunks: Blob[] = []
@@ -69,10 +71,11 @@ export async function listen(opts: { language: LanguageCode; maxMs?: number; onS
     const r = await fetch('/api/stt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audio: await toBase64(blob), mime: blob.type, language }),
+      body: JSON.stringify({ audio: await toBase64(blob), mime: blob.type, language, mode }),
     })
     if (!r.ok) return ''
     const j = await r.json()
+    if (typeof j.language === 'string') lastSttLanguage = j.language
     const t = typeof j.transcript === 'string' ? j.transcript.trim() : ''
     if (t) { try { localStorage.setItem('doodle-class:voice-used', '1') } catch { /* ignore */ } }
     return t
