@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import rough from 'roughjs'
 import type { BoardItem, LessonStep } from '../../types'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import './whiteboard.css'
 
 export interface WhiteboardProps {
@@ -207,6 +209,56 @@ const SHAPE_SIZE: Record<string, { w?: number; h: number }> = {
   underline: { h: 26 }, divider: { h: 22 },
 }
 
+
+/* ---------- KaTeX helpers ---------- */
+function stripWrap(t: string): string {
+  t = t.trim()
+  const pairs: [string, string][] = [['$$', '$$'], ['\\[', '\\]'], ['\\(', '\\)'], ['$', '$']]
+  for (const [a, b] of pairs) if (t.length >= a.length + b.length && t.startsWith(a) && t.endsWith(b)) return t.slice(a.length, t.length - b.length).trim()
+  return t
+}
+function plainToTex(t: string): string {
+  if (t.includes('\\')) return t
+  return t
+    .replace(/\*\*/g, '')
+    .replace(/sqrt\(([^()]*)\)/g, '\\sqrt{$1}')
+    .replace(/(\d+(?:\.\d+)?|[a-zA-Z])\s*\/\s*(\d+(?:\.\d+)?|[a-zA-Z])/g, '\\frac{$1}{$2}')
+    .replace(/\*/g, '\\times ')
+    .replace(/(?<![\\a-zA-Z{])([A-Za-z]{2,})(?![a-zA-Z}])/g, (w) => (w === 'frac' || w === 'times' || w === 'sqrt' ? w : '\\text{' + w + '}'))
+}
+function eqToHtml(raw: string): string {
+  const src = stripWrap(raw)
+  const lines = src.split(/\\\\|\n| ; /).map(l => stripWrap(l).trim()).filter(Boolean).map(plainToTex)
+  const r = (tex: string) => katex.renderToString(tex, { throwOnError: false, displayMode: true })
+  if (lines.length > 1 && lines.every(l => l.includes('='))) {
+    return r('\\begin{aligned}' + lines.map(l => l.replace('=', '&=')).join(' \\\\ ') + '\\end{aligned}')
+  }
+  return lines.map(r).join('')
+}
+function inlineMath(raw: string): ReactNode[] {
+  return raw.split(/(\$[^$]+\$)/).filter(Boolean).map((part, i) => {
+    if (/^\$[^$]+\$$/.test(part)) {
+      const html = katex.renderToString(part.slice(1, -1), { throwOnError: false, displayMode: false })
+      return <span key={i} className="wb-im" dangerouslySetInnerHTML={{ __html: html }} />
+    }
+    return <span key={i}>{parseRich(part, 'text').map((g, k) => <span key={k} className={'wb-s wb-s-' + g.kind}>{g.text}</span>)}</span>
+  })
+}
+
+function Wipe({ animate, speed, onDone, children, className }: { animate: boolean; speed: number; onDone?: () => void; children: ReactNode; className?: string }) {
+  const [on, setOn] = useState(!animate)
+  const doneRef = useRef(onDone)
+  doneRef.current = onDone
+  useEffect(() => {
+    if (!animate) return
+    const a = window.setTimeout(() => setOn(true), 30)
+    const b = window.setTimeout(() => doneRef.current?.(), 800 / speed + 150)
+    return () => { window.clearTimeout(a); window.clearTimeout(b) }
+  }, [animate, speed])
+  const style = animate ? { clipPath: on ? 'inset(-10% 0 -10% 0)' : 'inset(-10% 100% -10% 0)', transition: `clip-path ${700 / speed}ms ease-out` } : undefined
+  return <div className={className} style={style}>{children}</div>
+}
+
 /* ---------- BoardLine ---------- */
 interface BoardLineProps {
   item: BoardItem
@@ -236,7 +288,11 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
   const drawColor = DRAW_CYCLE[hash(item.kind === 'drawing' ? item.shape + (item.label ?? '') : '') % DRAW_CYCLE.length]
   const underColor = isReddish(accent) ? M_BLUE : M_RED
   const seed = useMemo(() => hash(item.kind + '|' + text + (item.kind === 'drawing' ? item.shape + (item.label ?? '') : '')), [item, text])
-  const [n, setN] = useState(animate ? 0 : chars.length)
+  const isEq = item.kind === 'equation'
+  const hasInline = !isEq && item.kind !== 'drawing' && item.kind !== 'title' && /\$[^$]+\$/.test(rawText)
+  const math = isEq || hasInline
+  const eqHtml = useMemo(() => (isEq ? eqToHtml(rawText) : ''), [isEq, rawText])
+  const [n, setN] = useState(animate && !math ? 0 : chars.length)
   const [drawn, setDrawn] = useState(!animate)
   const typed = n >= chars.length
   const hasDecor = item.kind === 'title' || item.kind === 'highlight'
@@ -259,10 +315,10 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
 
   // done for plain text kinds
   useEffect(() => {
-    if (!animate || isDrawing || hasDecor || !typed) return
+    if (!animate || isDrawing || hasDecor || !typed || math) return
     const t = window.setTimeout(finish, 180 / speed)
     return () => window.clearTimeout(t)
-  }, [animate, isDrawing, hasDecor, typed, speed, finish])
+  }, [animate, isDrawing, hasDecor, typed, speed, finish, math])
 
   const onDecorDone = useCallback(() => { setDrawn(true); if (animate) finish() }, [animate, finish])
 
@@ -286,14 +342,17 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
     </>
   )
   const showDecor = !animate || typed
+  const wipeDone = !hasDecor ? finish : undefined
+  const mathNode = hasInline ? <Wipe animate={animate && !hasDecor} speed={speed} onDone={wipeDone} className="wb-wipe">{inlineMath(rawText)}</Wipe> : null
   const dur = 650 / speed
+  const out = hasInline ? mathNode : revealed
 
   switch (item.kind) {
     case 'title':
       return (
         <div className="wb-line wb-title" style={style}>
           <span className="wb-title-text" style={{ color: accent }}>
-            {revealed}
+            {out}
             <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 14 }}>
               {showDecor && <RoughSvg draw={drawUnderline(underColor, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
             </span>
@@ -301,31 +360,37 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
         </div>
       )
     case 'text':
-      return <div className="wb-line wb-text" style={style}>{revealed}</div>
+      return <div className="wb-line wb-text" style={style}>{out}</div>
     case 'bullet':
       return (
         <div className="wb-line wb-bullet" style={{ ...style, color: lineColor }}>
           <span className="wb-dot">
             <RoughSvg animate={false} draw={(rc, w, h) => [rc.ellipse(w / 2, h / 2, w - 5, h - 5, { fill: lineColor, fillStyle: 'solid', stroke: lineColor, strokeWidth: 1.4, roughness: 1.6, seed })]} />
           </span>
-          <span className="wb-btext">{revealed}</span>
+          <span className="wb-btext">{out}</span>
         </div>
       )
     case 'equation':
-      return <div className="wb-line wb-equation" style={style}>{revealed}</div>
+      return (
+        <div className="wb-line wb-equation" style={style}>
+          <Wipe animate={animate} speed={speed} onDone={finish} className="wb-eq-wipe">
+            <div className="wb-eq-inner" dangerouslySetInnerHTML={{ __html: eqHtml }} />
+          </Wipe>
+        </div>
+      )
     case 'highlight':
       return (
         <div className="wb-line wb-highlight-wrap" style={style}>
           <span className="wb-highlight">
             {showDecor && <RoughSvg draw={drawHighlightBox(M_ORANGE, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
-            <span className="wb-hl-text">{revealed}</span>
+            <span className="wb-hl-text">{out}</span>
           </span>
         </div>
       )
     case 'example':
       return (
         <div className="wb-line wb-example" style={style}>
-          <span className="wb-eg">e.g.</span>{revealed}
+          <span className="wb-eg">e.g.</span>{out}
         </div>
       )
     case 'drawing': {

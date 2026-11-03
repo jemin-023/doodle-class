@@ -45,3 +45,10 @@
 .wb-example { color: var(--marker-green); }
 .wb-example .wb-s-plain { color: var(--marker-green); }
 .wb-eg { color: var(--marker-green); font-weight: 700; }
+
+.wb-equation { letter-spacing: 0; word-spacing: 0; color: var(--marker-blue); font-family: inherit; }
+.wb-eq-inner { font-size: 1.6em; color: var(--marker-blue); overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.wb-eq-inner .katex-display { margin: .25em 0; }
+.wb-eq-wipe { max-width: 100%; }
+.wb-wipe { display: inline; }
+.wb-im .katex { font-size: 1.1em; }

@@ -56,6 +56,7 @@ Rules:
 - Each step's "board" has 1-4 items, text short like a teacher writes on a board (max ~8 words).
 - Item shapes: {"kind":"title"|"text"|"bullet"|"equation"|"highlight"|"example","text":string} or {"kind":"drawing","shape":"circle"|"arrow"|"box"|"star"|"underline"|"divider","label"?:string}.
 - In board text (not title/equation), wrap 1-2 key words in **double asterisks**, e.g. "Plants need **sunlight**".
+- "equation" items must be valid LaTeX with NO $ wrappers, one step of working per line separated by \\\\ (e.g. "\\frac{1}{2}+\\frac{1}{4}=\\frac{3}{4}"). Put inline maths in other items inside $...$ (e.g. "Half is $\\frac{1}{2}$"). Remember JSON escaping: backslashes must be doubled in the JSON output.
 - Step 1 board starts with a title. Use "equation" for maths, "highlight" for the key idea, drawings sparingly (at most 2 in total).
 - Last step is a quick recap. Never put a newline inside a JSON object.`
     let buf = ''

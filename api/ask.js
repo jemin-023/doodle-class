@@ -15,6 +15,7 @@ The student asks: "${question}"
 Answer in ${lang}, in character, 2-3 SHORT sentences a grade ${grade} child understands.
 JSON: {"say": string, "board": [item, ...]} with 1-4 short board items related to the lesson.
 In board text wrap 1-2 key words in **double asterisks**.
+In JSON, "equation" items must be LaTeX with NO $ wrappers, steps separated by \\\\ ; inline maths in other items goes in $...$. Double every backslash in the JSON output.
 Item shapes: {"kind":"title"|"text"|"bullet"|"equation"|"highlight"|"example","text":string} or {"kind":"drawing","shape":"circle"|"arrow"|"box"|"star"|"underline"|"divider","label"?:string}.`
     const out = await chat([{ role: 'system', content: sys }, { role: 'user', content: user }], { temperature: 0.5, max_tokens: 400 })
     const step = sanitizeStep(extractJSON(out))
