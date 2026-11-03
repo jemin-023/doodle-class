@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { CHARACTERS, LANGUAGES } from '../characters/registry'
 import type { LanguageCode } from '../types'
 import Character, { CharacterAvatar } from '../components/Characters/Character'
@@ -8,7 +8,9 @@ import { getHistory, getTotalStars } from '../lib/progress'
 import { getProfile } from '../lib/profile'
 import CoachCard from '../components/Coach/CoachCard'
 import './pages.css'
-import { DoodleScatter } from '../components/Doodles/Doodles'
+import './study.css'
+import { DoodleScatter, Doodle } from '../components/Doodles/Doodles'
+import type { DoodleName } from '../components/Doodles/Doodles'
 
 const SUGGESTIONS: Record<string, string[]> = {
   tara: ['Fractions', 'Times tables', 'Shapes'],
@@ -29,13 +31,26 @@ function loadPrefs(): { c: string; l: LanguageCode; g: number } {
   } catch { return d }
 }
 
+const MENU: { label: string; sub: string; to: string; doodle: DoodleName; color?: string; free?: boolean }[] = [
+  { label: 'Learn from my book', sub: 'NCERT, chapter by chapter', to: '/study', doodle: 'book', color: 'var(--marker-green)' },
+  { label: 'Learn anything', sub: 'Pick a topic, any topic', to: '/#learn-anything', doodle: 'bulb', free: true },
+  { label: 'Test myself', sub: 'A quick quiz on my book', to: '/study?mode=test', doodle: 'ruler', color: 'var(--marker-red)' },
+  { label: 'Talk to a teacher', sub: 'Ask out loud', to: '/talk/:t', doodle: 'cloud' },
+  { label: 'Snap a page', sub: 'Photo to lesson', to: '/snap', doodle: 'pencil' },
+  { label: 'Classroom', sub: 'Quiz with friends', to: '/class', doodle: 'rocket' },
+  { label: 'Family voice', sub: 'Hear Nani teach', to: '/family-voice', doodle: 'sun' },
+  { label: 'Progress', sub: 'My stars', to: '/progress', doodle: 'star' },
+  { label: 'Parent report', sub: 'A voice note for home', to: '/parent', doodle: 'apple' },
+]
+
 export default function Home() {
   const nav = useNavigate()
+  const [qs] = useSearchParams()
   const [prefs] = useState(loadPrefs)
   const [cid, setCid] = useState(prefs.c)
   const [lang, setLang] = useState<LanguageCode>(prefs.l)
-  const [grade, setGrade] = useState(prefs.g)
-  const [topic, setTopic] = useState('')
+  const [grade, setGrade] = useState(() => { const g = Number(qs.get('grade')); return g >= 1 && g <= 10 ? g : prefs.g })
+  const [topic, setTopic] = useState(qs.get('topic') ?? '')
   const [hover, setHover] = useState<string | null>(null)
   const history = getHistory().slice(0, 4)
   const stars = getTotalStars()
@@ -59,12 +74,27 @@ export default function Home() {
       <main className="pg-wrap pg-sheet">
         <header className="pg-head">
           {pname && <p className="pg-sub">Hi {pname}!</p>}
-          <h1>What do you want to <span className="pg-scribbled">learn<span className="pg-scribble"><Scribble kind="underline" color="var(--marker-red)" width={160} height={14} /></span></span> today?</h1>
-          <p className="pg-sub">Pick a teacher, name a topic, and watch the lesson get written out for you.</p>
+          <h1>What do you want to <span className="pg-scribbled">do<span className="pg-scribble"><Scribble kind="underline" color="var(--marker-red)" width={110} height={14} /></span></span> today?</h1>
+          <p className="pg-sub">Pick one. Your teacher will take it from there.</p>
         </header>
+
+        <nav className="hm-menu" aria-label="What do you want to do?">
+          {MENU.map((m, i) => (
+            <Link key={m.label} to={m.to.replace(':t', tchr.id)} className="hm-card" onClick={m.free ? (e => { e.preventDefault(); document.getElementById('learn-anything')?.scrollIntoView({ behavior: 'smooth' }) }) : undefined}>
+              <SketchCard tilt={i % 2 ? 0.8 : -0.8} tape={i === 0} color={m.color}>
+                <span className="hm-in">
+                  <Doodle name={m.doodle} size={44} rotate={i % 2 ? 6 : -6} />
+                  <span className="hm-t">{m.label}</span>
+                  <span className="hm-s">{m.sub}</span>
+                </span>
+              </SketchCard>
+            </Link>
+          ))}
+        </nav>
 
         <CoachCard />
 
+        <h2 id="learn-anything" className="pg-h2 hm-anything">Learn anything</h2>
         <section aria-labelledby="pg-teach">
           <h2 id="pg-teach" className="pg-h2">Pick your teacher</h2>
           <div className="pg-grid">
@@ -122,18 +152,11 @@ export default function Home() {
         </section>
 
         <nav className="pg-tabs" aria-label="More places">
-          <Link to={`/learn/${cid}`} onClick={e => { e.preventDefault(); document.getElementById('pg-topic-h')?.scrollIntoView({ behavior: 'smooth' }) }}>Learn</Link>
           <Link to="/practice">Just a quiz</Link>
-          <Link to={`/talk/${tchr.id}`}>Talk</Link>
           <Link to={`/journey/${cid}`}>My chapter map</Link>
-          <Link to="/progress">Progress</Link>
           <Link to="/profile">Profile</Link>
           <Link to="/syllabus">Upload syllabus</Link>
-          <Link to="/snap">Snap your textbook</Link>
-          <Link to="/family-voice">Family voice</Link>
-          <Link to="/class">Classroom</Link>
           <Link to="/join">Join a class</Link>
-          <Link to="/parent">Parent report</Link>
         </nav>
 
         {history.length > 0 && (

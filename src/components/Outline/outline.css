@@ -1,0 +1,21 @@
+.ol { width: 100%; background: var(--board); border: 2px solid var(--ink); border-radius: 3px 8px 4px 6px; box-shadow: var(--shadow); text-align: left; }
+.ol-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 10px; background: none; border: 0; color: var(--ink); font-family: var(--font-hand); font-size: 1.3rem; font-weight: 700; }
+.ol-count { white-space: nowrap; }
+.ol-meter { flex: 1; height: 8px; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; background: var(--paper); min-width: 30px; }
+.ol-meter span { display: block; height: 100%; background: var(--marker-green); transition: width .3s; }
+.ol-chev { display: inline-flex; transition: transform .2s; transform: rotate(90deg); }
+.ol-chev.is-open { transform: rotate(-90deg); }
+.ol-list { list-style: none; margin: 0; padding: 0 6px 8px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; }
+.ol-item { display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: 44px; padding: 6px 4px; background: none; border: 0; border-top: 1px dashed var(--ink-faint); text-align: left; color: var(--ink); font-size: .92rem; line-height: 1.3; }
+.ol-item:hover { background: var(--highlight); }
+.ol-box { flex: none; width: 22px; height: 22px; margin-top: 1px; border: 2px solid var(--ink); border-radius: 4px 6px 3px 5px; display: inline-flex; align-items: center; justify-content: center; color: var(--marker-green); background: var(--paper); }
+.ol-item.is-done .ol-text { color: var(--ink-soft); }
+.ol-tag { display: inline-block; margin-right: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; border: 1.5px solid currentColor; border-radius: 8px; vertical-align: 1px; }
+.ol-tag-example { color: var(--marker-blue); } .ol-tag-activity { color: var(--marker-orange); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.ol-side { display: none; }
+@media (min-width: 900px) { .ol-side { display: block; } .ol-bar { display: none; } }
+.ol-src { margin: 0 0 8px; font-family: var(--font-hand); font-size: 1.25rem; color: var(--ink-soft); }
+.ol-src b { color: var(--ink); }
+.ol-bar { margin-bottom: 12px; }

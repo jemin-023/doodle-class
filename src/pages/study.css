@@ -1,0 +1,45 @@
+/* Lane N3: /study picker */
+.st-wrap { max-width: 900px; }
+.st-head { margin-bottom: 20px; }
+.st-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-bottom: 16px; font-family: var(--font-hand); font-size: 1.4rem; }
+.st-back { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: var(--paper); border: 2px solid var(--ink); border-radius: var(--radius); color: var(--ink); }
+.st-back:hover { background: var(--highlight); }
+.st-crumb-wrap { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.st-crumb { background: none; border: 0; border-bottom: 3px solid var(--highlight); min-height: 44px; padding: 0 4px; font: inherit; color: var(--ink-soft); max-width: 70vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-crumb.is-now { color: var(--ink); border-bottom-color: var(--marker-green); }
+.st-class { margin-bottom: 16px; }
+.st-h2 { border-bottom-color: var(--marker-green); }
+.st-list { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: 1fr; gap: 14px; }
+.st-subjects { grid-template-columns: 1fr 1fr; gap: 16px; }
+.st-item { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; color: var(--ink); min-height: 44px; }
+.st-item .ui-card { padding: 14px 16px; }
+.st-item:hover .ui-card { background: var(--highlight); }
+.st-row { display: flex; align-items: center; gap: 12px; }
+.st-t { font-family: var(--font-hand); font-size: 1.5rem; font-weight: 700; line-height: 1.15; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.st-tag { font-size: .8rem; color: var(--ink-soft); border: 1px dashed var(--ink-faint); padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+.st-chap { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px dashed var(--ink-faint); }
+.st-chap:hover { background: var(--highlight); }
+.st-chap .st-t { font-size: 1.35rem; font-weight: 600; }
+.st-num { flex: none; min-width: 44px; height: 36px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-hand); font-size: 1.4rem; font-weight: 700; border: 2px solid var(--ink); border-radius: 50% 40% 55% 45% / 45% 55% 40% 50%; background: var(--paper); }
+.st-chapters, .st-list:has(.st-chap) { gap: 0; }
+.st-chapters { max-height: 62vh; overflow-y: auto; overscroll-behavior: contain; border: 2px solid var(--ink); border-radius: 3px 8px 4px 6px; background: var(--board); }
+.st-list:has(.st-chap) > li:has(.ui-card) { margin: 10px 0; }
+.st-opts { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; padding: 16px; background: var(--paper-2); border: 2px dashed var(--ink-faint); }
+.st-hint { margin: 12px 0 0; font-size: .95rem; }
+.st-empty { font-family: var(--font-hand); font-size: 1.6rem; }
+.st-link { background: none; border: 0; padding: 0; font: inherit; color: var(--marker-blue); text-decoration: underline; }
+@media (min-width: 700px) { .st-subjects { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .st-t { font-size: 1.3rem; } }
+
+/* Home menu (Lane N3) */
+.hm-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 16px; margin: 0 0 40px; }
+.hm-card { display: block; text-decoration: none; color: var(--ink); min-height: 44px; }
+.hm-card:hover { color: var(--ink); }
+.hm-card .ui-card { height: 100%; padding: 14px 12px; }
+.hm-card:hover .ui-card, .hm-card:focus-visible .ui-card { background: var(--highlight); }
+.hm-card:focus-visible { outline: none; }
+.hm-in { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.hm-t { font-family: var(--font-hand); font-size: 1.55rem; font-weight: 700; line-height: 1.05; margin-top: 4px; }
+.hm-s { font-size: .88rem; color: var(--ink-soft); line-height: 1.25; }
+.hm-anything { margin-top: 8px; border-bottom-color: var(--marker-green); scroll-margin-top: 80px; }
+@media (min-width: 700px) { .hm-menu { grid-template-columns: repeat(3, 1fr); gap: 24px 20px; } .hm-t { font-size: 1.8rem; } }

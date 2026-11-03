@@ -92,6 +92,9 @@ export default function QuizPage() {
   const language = (sp.get('lang') ?? 'en-IN') as LanguageCode
   const grade = Number(sp.get('grade') ?? 6) || 6
   const lesson = (location.state as { lesson?: Lesson } | null)?.lesson
+  const ncertFile = sp.get('ncert') || ''
+  const ncertSec = sp.get('sec') || ''
+  const ncert = ncertFile ? { file: ncertFile, ...(ncertSec ? { sec: ncertSec } : {}) } : undefined
   const source = (location.state as { source?: string } | null)?.source
   const character = getCharacter(characterId)
 
@@ -115,7 +118,7 @@ export default function QuizPage() {
     let cancelled = false
     setQuestions(null); setError(false); setIdx(0); setScore(0); setDone(false)
     setPicked(null); setFillText(''); setAnswered(false)
-    generateQuiz({ topic, language, grade, lesson, ...(source ? { source: source.slice(0, 200) } : {}) })
+    generateQuiz({ topic, language, grade, lesson, ...(ncert ? { ncert } : {}), ...(source ? { source: source.slice(0, 200) } : {}) })
       .then(q => {
         if (cancelled) return
         if (!q.questions?.length) throw new Error('empty')
@@ -126,7 +129,7 @@ export default function QuizPage() {
       .catch(() => { if (!cancelled) setError(true) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topic, language, grade, attempt])
+  }, [topic, language, grade, attempt, ncertFile, ncertSec])
 
   useEffect(() => () => { stopSpeaking(); stopListening() }, [])
   useEffect(() => { setHeard(null) }, [idx])
@@ -203,7 +206,7 @@ export default function QuizPage() {
     setIdx(0); setScore(0); setDone(false); setPicked(null); setFillText(''); setAnswered(false); setCorrect(false); setHeard(null); stopListening()
   }
 
-  const learnQs = `topic=${encodeURIComponent(topic)}&lang=${language}&grade=${grade}`
+  const learnQs = `topic=${encodeURIComponent(topic)}&lang=${language}&grade=${grade}${ncert ? `&ncert=${ncert.file}${ncert.sec ? `&sec=${encodeURIComponent(ncert.sec)}` : ''}` : ''}`
   const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m); if (m) stopSpeaking() }
 
   const loading = !questions && !error
