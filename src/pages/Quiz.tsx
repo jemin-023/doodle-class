@@ -92,6 +92,7 @@ export default function QuizPage() {
   const language = (sp.get('lang') ?? 'en-IN') as LanguageCode
   const grade = Number(sp.get('grade') ?? 6) || 6
   const lesson = (location.state as { lesson?: Lesson } | null)?.lesson
+  const source = (location.state as { source?: string } | null)?.source
   const character = getCharacter(characterId)
 
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
@@ -114,7 +115,7 @@ export default function QuizPage() {
     let cancelled = false
     setQuestions(null); setError(false); setIdx(0); setScore(0); setDone(false)
     setPicked(null); setFillText(''); setAnswered(false)
-    generateQuiz({ topic, language, grade, lesson })
+    generateQuiz({ topic, language, grade, lesson, ...(source ? { source: source.slice(0, 200) } : {}) })
       .then(q => {
         if (cancelled) return
         if (!q.questions?.length) throw new Error('empty')

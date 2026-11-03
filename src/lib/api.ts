@@ -32,7 +32,7 @@ export async function generateQuiz(req: QuizRequest): Promise<Quiz> {
   }
 }
 
-export interface AskRequest { question: string; lesson: Lesson; characterId: string; language: LanguageCode; grade: number }
+export interface AskRequest { question: string; lesson: Lesson; characterId: string; language: LanguageCode; grade: number; focus?: string[] }
 /** Student doubt -> one extra LessonStep (say + board items) answering it. */
 export async function askTeacher(req: AskRequest): Promise<LessonStep> {
   try {
@@ -61,6 +61,8 @@ export async function streamLesson(
       meta = { topic: o.topic || req.topic, subject: o.subject || 'General' }
       if (o.fallback) fallback = true
       h.onMeta?.(meta)
+    } else if (o.type === 'done') {
+      if (typeof o.ms_first_step === 'number') console.debug(`[lesson] first step ${o.ms_first_step}ms${o.cached ? ' (cached)' : ''}`)
     } else if (o.type === 'step' && o.say && Array.isArray(o.board)) {
       const st: LessonStep = { say: o.say, board: o.board }
       steps.push(st)
