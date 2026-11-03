@@ -1,12 +1,14 @@
 // Lane N3: "Learn from my book" picker. Class -> Subject -> Book -> Chapter -> Topic. State lives in the URL.
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import catalogJson from '../data/ncert/catalog.json'
 import type { CatalogBook, CatalogChapter, CatalogSubject, LanguageCode, NcertCatalog } from '../types'
 import { CHARACTERS, LANGUAGES } from '../characters/registry'
 import { SketchButton, SketchCard, Icon, TopBar, Chip } from '../components/ui'
 import { CharacterAvatar } from '../components/Characters/Character'
 import { DoodleScatter } from '../components/Doodles/Doodles'
+import { getResume, getSectionProgress } from '../lib/resume'
+import type { SectionStatus } from '../lib/resume'
 import './pages.css'
 import './study.css'
 import BoardLangToggle, { boardParam, useEnglishBoard } from '../components/BoardLang/BoardLang'
@@ -33,12 +35,57 @@ function loadPrefs(): { c: string; l: LanguageCode; g: number } {
     }
   } catch { return d }
 }
+
 export function teacherFor(subject: string): string {
   const s = subject.toLowerCase()
   if (/math|ganit|गणित/.test(s)) return 'tara'
   if (/science|vigyan|विज्ञान/.test(s)) return 'bolt'
   if (/english|hindi|urdu|sanskrit|tamil|telugu|kannada|marathi|bengali|bangla|gujarati|malayalam|odia|punjabi|language|reader|literature/.test(s)) return 'mishri'
   return 'gajju'
+}
+
+function SectionStatusIcon({ status }: { status?: SectionStatus }) {
+  if (status === 'mastered') {
+    return (
+      <span className="st-status st-status-mastered" title="Mastered" aria-label="Mastered">
+        <Icon name="star" size={16} />
+      </span>
+    )
+  }
+  if (status === 'done') {
+    return (
+      <span className="st-status st-status-done" title="Done" aria-label="Done">
+        <Icon name="check" size={16} />
+      </span>
+    )
+  }
+  if (status === 'learning') {
+    return (
+      <span className="st-status st-status-learning" title="Learning" aria-label="Learning">
+        <Icon name="pencil" size={16} />
+      </span>
+    )
+  }
+  return (
+    <span className="st-status st-status-empty" title="Not started" aria-label="Not started">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="8" cy="8" r="6" />
+      </svg>
+    </span>
+  )
+}
+
+function getChapterProgress(c: CatalogChapter, pMap: Record<string, { status: SectionStatus; stars: number; at: number }>) {
+  const total = c.sections.length
+  if (total === 0) {
+    const chapDone = pMap[`${c.file}|*`]?.status === 'done' || pMap[`${c.file}|*`]?.status === 'mastered'
+    return { done: chapDone ? 1 : 0, total: 1, pct: chapDone ? 100 : 0 }
+  }
+  const done = c.sections.filter(s => {
+    const st = pMap[`${c.file}|${s.id}`]?.status
+    return st === 'done' || st === 'mastered'
+  }).length
+  return { done, total, pct: Math.round((done / total) * 100) }
 }
 
 export default function Study() {
@@ -53,6 +100,9 @@ export default function Study() {
   const [charPick, setCharPick] = useState<string | null>(null)
   const [lang, setLang] = useState<LanguageCode>(prefs.l)
   const [englishBoard, setEnglishBoard] = useEnglishBoard()
+
+  const resume = useMemo(() => getResume(), [])
+  const progress = useMemo(() => getSectionProgress(), [])
 
   const cls = CATALOG.classes.find(c => c.grade === grade)
   const subject: CatalogSubject | undefined = cls?.subjects.find(s => s.id === subjectId)
@@ -76,6 +126,17 @@ export default function Study() {
     else nav(`/learn/${cid}?lang=${lang}${boardParam(lang, englishBoard)}${ref}&topic=${encodeURIComponent(title)}`)
   }
   const other = () => nav(`/?other=1&topic=${encodeURIComponent(chapter?.title ?? '')}&grade=${grade}#learn-anything`)
+
+  const practiceModes = [
+    { mode: 'exercises', label: 'Book exercises' },
+    ...(grade >= 9 ? [{ mode: 'exam', label: 'Exam questions' }] : []),
+    { mode: 'notes', label: 'Revision notes' },
+    { mode: 'cards', label: 'Flashcards' },
+  ]
+  const practiceUrl = (file: string, secId: string | undefined, mode: string) => {
+    const secParam = secId ? `&sec=${encodeURIComponent(secId)}` : ''
+    return `/book-practice?ncert=${encodeURIComponent(file)}${secParam}&grade=${grade}&lang=${lang}&mode=${mode}`
+  }
 
   // breadcrumbs (each crumb clears everything after it)
   const crumbs: { label: string; patch: Record<string, string | null> }[] = []
@@ -102,6 +163,22 @@ export default function Study() {
           <h1>{test ? 'Test myself' : 'Learn from my book'}</h1>
           <p className="pg-sub">{test ? 'Pick a part of your NCERT book and take a quick quiz.' : 'Pick a part of your NCERT book. We will go through every point and example.'}</p>
         </header>
+
+        {resume && (
+          <div className="st-resume">
+            <Link to={resume.url} className="st-resume-link">
+              <SketchCard tape tilt={-0.6} color="var(--marker-blue)">
+                <div className="st-resume-in">
+                  <Icon name="play" size={24} />
+                  <div className="st-resume-text">
+                    <span className="st-resume-label">Continue: {resume.title || 'Lesson'}, step {resume.step ?? 1} of {resume.total ?? 1}</span>
+                  </div>
+                  <Icon name="next" size={20} />
+                </div>
+              </SketchCard>
+            </Link>
+          </div>
+        )}
 
         <nav className="st-crumbs" aria-label="Where you are">
           <button type="button" className="st-back" onClick={back} aria-label="Go back"><Icon name="back" size={20} /></button>
@@ -159,29 +236,101 @@ export default function Study() {
 
         {book && !chapter && (
           <ul className="st-list st-chapters">
-            {book.chapters.map(c => (
-              <li key={c.file}>
-                <button type="button" className="st-item st-chap" onClick={() => upd({ chapter: c.file })}>
-                  <span className="st-num">{c.n}</span><span className="st-t">{c.title}</span><Icon name="next" size={18} />
-                </button>
-              </li>
-            ))}
+            {book.chapters.map(c => {
+              const { done, total, pct } = getChapterProgress(c, progress)
+              return (
+                <li key={c.file} className="st-chap-li">
+                  <button type="button" className="st-item st-chap" onClick={() => upd({ chapter: c.file })}>
+                    <span className="st-num">{c.n}</span>
+                    <div className="st-chap-info">
+                      <span className="st-t">{c.title}</span>
+                      <div className="st-chap-progress" title={`${done} of ${total} sections completed`}>
+                        <div className="st-meter" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={`${c.title}: ${done} of ${total} sections completed`}>
+                          <span style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="st-meter-label">{done}/{total}</span>
+                      </div>
+                      {c.sections.length > 0 && (
+                        <div className="st-sec-map" aria-label="Section progress">
+                          {c.sections.map(s => (
+                            <span key={s.id} className="st-sec-map-item" title={`Sec ${s.id}: ${progress[`${c.file}|${s.id}`]?.status ?? 'not started'}`}>
+                              <SectionStatusIcon status={progress[`${c.file}|${s.id}`]?.status} />
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <SectionStatusIcon status={progress[`${c.file}|*`]?.status} />
+                    <Icon name="next" size={18} />
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         )}
 
         {chapter && (
           <>
-            <ul className="st-list">
-              <li>
+            <div className="st-topic-head">
+              <div className="st-topic-progress">
+                {(() => {
+                  const cp = getChapterProgress(chapter, progress)
+                  return (
+                    <>
+                      <div className="st-meter" role="progressbar" aria-valuemin={0} aria-valuemax={cp.total} aria-valuenow={cp.done} aria-label={`Chapter progress: ${cp.done} of ${cp.total} sections completed`}>
+                        <span style={{ width: `${cp.pct}%` }} />
+                      </div>
+                      <span className="st-meter-label">{cp.done}/{cp.total} sections completed</span>
+                    </>
+                  )
+                })()}
+              </div>
+              <a
+                href={`https://ncert.nic.in/textbook/pdf/${chapter.file}.pdf`}
+                target="_blank"
+                rel="noreferrer"
+                className="st-book-link"
+              >
+                <Icon name="book" size={18} />
+                <span>Open the book page</span>
+              </a>
+            </div>
+
+            <ul className="st-list st-topic-list">
+              <li className="st-topic-li">
                 <button type="button" className="st-item" onClick={() => go(null, chapter.title)}>
-                  <SketchCard tape tilt={-0.6} color="var(--marker-green)"><span className="st-row"><Icon name="star" size={28} /><span className="st-t">Whole chapter</span><span className="st-tag">{chapter.sections.length} parts</span></span></SketchCard>
+                  <SketchCard tape tilt={-0.6} color="var(--marker-green)">
+                    <span className="st-row">
+                      <SectionStatusIcon status={progress[`${chapter.file}|*`]?.status} />
+                      <Icon name="star" size={28} />
+                      <span className="st-t">Whole chapter</span>
+                      <span className="st-tag">{chapter.sections.length} parts</span>
+                    </span>
+                  </SketchCard>
                 </button>
+                <div className="st-chips-row" aria-label="Practice tools for whole chapter">
+                  {practiceModes.map(m => (
+                    <Link key={m.mode} to={practiceUrl(chapter.file, undefined, m.mode)} className="st-chip">
+                      {m.label}
+                    </Link>
+                  ))}
+                </div>
               </li>
               {chapter.sections.map(s => (
-                <li key={s.id}>
+                <li key={s.id} className="st-topic-li">
                   <button type="button" className="st-item st-chap" onClick={() => go(s.id, s.title)}>
-                    <span className="st-num">{s.id}</span><span className="st-t">{s.title}</span><Icon name="next" size={18} />
+                    <span className="st-num">{s.id}</span>
+                    <span className="st-t">{s.title}</span>
+                    <SectionStatusIcon status={progress[`${chapter.file}|${s.id}`]?.status} />
+                    <Icon name="next" size={18} />
                   </button>
+                  <div className="st-chips-row" aria-label={`Practice tools for ${s.title}`}>
+                    {practiceModes.map(m => (
+                      <Link key={m.mode} to={practiceUrl(chapter.file, s.id, m.mode)} className="st-chip">
+                        {m.label}
+                      </Link>
+                    ))}
+                  </div>
                 </li>
               ))}
               <li>
