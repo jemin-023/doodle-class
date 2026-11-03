@@ -2,6 +2,7 @@
 // POST {ncert:{file,sec?}, characterId, language, grade, from?} -> NDJSON: meta (with outline), step* (with covers), done {next?}
 import fs from 'node:fs'
 import { localizeStep } from './_localize.js'
+import { stripGreeting, cleanBoardText } from './_textfix.js'
 import { chat, chatStream, extractJSON, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, cleanLang, cleanGrade, rejectNonPost, fixLatexEscapes, BOARD_ITEM_SHAPES, boardLangOf, boardRule } from './_sarvam.js'
 import { cacheGet, cachePut, inLanguage } from './_cache.js'
 import { translateLesson } from './_translate.js'
@@ -240,7 +241,15 @@ export default async function handler(req, res) {
   res.flushHeaders?.()
   const send = o => res.write(JSON.stringify(o) + '\n')
   const log = { steps: 0, firstMs: 0, batches: [] }
-  const emitStep = async s => { if (!log.steps++) log.firstMs = Date.now() - t0; send({ type: 'step', say: s.say, board: s.board, covers: s.covers }) }
+  const emitStep = async s => {
+    const isFirst = from === 0 && log.steps === 0
+    if (!isFirst) {
+      s.say = stripGreeting(s.say, false)
+      cleanBoardText(s, rq.boardLanguage)
+    }
+    if (!log.steps++) log.firstMs = Date.now() - t0
+    send({ type: 'step', say: s.say, board: s.board, covers: s.covers })
+  }
   try {
     if (!rq.file) throw new Error('no file')
     const ch = await loadChapter(rq.file)

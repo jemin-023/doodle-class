@@ -32,6 +32,40 @@ function heuristic(lesson, explanation, language) {
   return { score, understood: hit.slice(0, 3), missing: score < 3 ? key.filter(w => !mine.has(w)).slice(0, 3) : [], say, fallback: true }
 }
 
+function isMostlyLatin(text) {
+  if (!text || typeof text !== 'string') return false
+  const total = (text.match(/\p{L}/gu) || []).length
+  if (!total) return false
+  const latin = (text.match(/\p{Script=Latin}/gu) || []).length
+  return latin / total > 0.5
+}
+
+async function transliterate(text, language) {
+  const key = process.env.SARVAM_API_KEY
+  if (!key || !text) return text
+  try {
+    const res = await fetch('https://api.sarvam.ai/transliterate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-subscription-key': key,
+      },
+      body: JSON.stringify({
+        input: text,
+        source_language_code: 'en-IN',
+        target_language_code: language,
+      }),
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return text
+    const j = await res.json()
+    return j?.transliterated_text || text
+  } catch (e) {
+    console.warn('[teachback] transliterate failed:', e.message || e)
+    return text
+  }
+}
+
 export default async function handler(req, res) {
   if (rejectNonPost(req, res)) return
   const b = parseBody(req)
@@ -83,6 +117,16 @@ ${BOARD_ITEM_SHAPES}`
         if (step.board[0].kind !== 'title') step.board.unshift({ kind: 'title', text: "Let's fix this" })
         result.correction = step
       }
+    }
+    if (language !== 'en-IN') {
+      const tasks = []
+      if (isMostlyLatin(result.say)) {
+        tasks.push(transliterate(result.say, language).then(t => { result.say = t }))
+      }
+      if (boardLanguage === language && result.misconception && isMostlyLatin(result.misconception)) {
+        tasks.push(transliterate(result.misconception, language).then(t => { result.misconception = t }))
+      }
+      if (tasks.length) await Promise.all(tasks)
     }
     return res.status(200).json(result)
   } catch (e) {

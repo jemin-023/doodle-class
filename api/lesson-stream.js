@@ -1,4 +1,5 @@
 import { localizeStep } from './_localize.js'
+import { stripGreeting, cleanBoardText } from './_textfix.js'
 import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS , cleanLang, cleanGrade, cleanTopic, rejectNonPost, fixLatexEscapes, BOARD_ITEM_SHAPES, boardLangOf, boardRule } from './_sarvam.js'
 import { cacheGet, cachePut, inLanguage } from './_cache.js'
 import { translateLesson } from './_translate.js'
@@ -56,6 +57,10 @@ export default async function handler(req, res) {
         } catch (e) { console.error('[lesson-stream] re-translate failed:', e.message || e) }
       }
       await localizeStep(s, request.boardLanguage)
+      if (steps > 0) {
+        s.say = stripGreeting(s.say, false)
+        cleanBoardText(s, request.boardLanguage)
+      }
       if (!metaSent) { metaSent = true; realMeta = { topic: request.topic, subject: CHAR_SUBJECTS[request.characterId] || 'General' }; send({ type: 'meta', ...realMeta }) }
       steps++
       if (steps === 1) firstMs = Date.now() - t0
@@ -74,7 +79,13 @@ export default async function handler(req, res) {
         const bad = await unsafeReply()
         if (!bad) {
           send({ type: 'meta', topic: hit.topic, subject: hit.subject, cached: true })
-          for (const st of hit.steps) { steps++; if (steps === 1) firstMs = Date.now() - t0; send({ type: 'step', say: st.say, board: st.board }) }
+          for (const st of hit.steps) {
+            if (steps > 0) {
+              st.say = stripGreeting(st.say, false)
+              cleanBoardText(st, request.boardLanguage)
+            }
+            steps++; if (steps === 1) firstMs = Date.now() - t0; send({ type: 'step', say: st.say, board: st.board })
+          }
           console.log(`[lesson-stream] cache HIT ${request.topic} ms_first_step=${firstMs}`)
           send({ type: 'done', cached: true, ms_first_step: firstMs })
           return res.end()

@@ -8,14 +8,85 @@ const MAX_PAR = 5
 const SKIP = new Set(['equation'])
 
 /* ---------- placeholders: protect $math$ and **bold** ---------- */
+function getShortBoldInfo(s) {
+  if (typeof s !== 'string') return null
+  if (!/\*\*([^*]+)\*\*/.test(s)) return null
+  const plain = s.replace(/\*\*/g, '').trim()
+  const words = plain.split(/\s+/).filter(Boolean)
+  if (words.length > 6) return null
+
+  const boldMatches = [...s.matchAll(/\*\*([^*]+)\*\*/g)]
+  if (boldMatches.length !== 1) {
+    return { unsure: true, plain }
+  }
+
+  const boldText = boldMatches[0][1].trim()
+  const boldWords = boldText.split(/\s+/).filter(Boolean)
+  const isEntire = words.length === boldWords.length
+
+  if (!isEntire && boldWords.length > 1) {
+    return { unsure: true, plain }
+  }
+
+  const boldStartChar = s.indexOf('**')
+  const beforeBold = s.slice(0, boldStartChar).replace(/\*\*/g, '').trim()
+  const beforeWords = beforeBold ? beforeBold.split(/\s+/).filter(Boolean) : []
+  const boldIndex = beforeWords.length
+
+  return {
+    isEntire,
+    boldIndex,
+    boldWordsCount: boldWords.length,
+    origWordCount: words.length,
+    plain,
+  }
+}
+
+function applyBold(word) {
+  const m = String(word).match(/^(\p{P}*)(.*?)(\p{P}*)$/u)
+  if (!m || !m[2]) return `**${word}**`
+  return `${m[1]}**${m[2]}**${m[3]}`
+}
+
 function protect(s) {
-  const maths = []   // '**' entries are bold markers (numbered like math so the translator leaves them alone)
+  const maths = []
+  const boldInfo = getShortBoldInfo(s)
+  if (boldInfo) {
+    const plain = s.replace(/\*\*/g, '')
+    let t = plain.replace(/\$([^$]+)\$/g, (m) => { maths.push(m); return `⟦${maths.length}⟧` })
+    return { t, maths, boldInfo }
+  }
   let t = String(s).replace(/\$([^$]+)\$/g, (m) => { maths.push(m); return `⟦${maths.length}⟧` })
   t = t.replace(/\*\*([^*]+)\*\*/g, (m, w) => { maths.push('**'); const a = maths.length; maths.push('**'); return `⟦${a}⟧${w}⟦${a + 1}⟧` })
   return { t, maths }
 }
-function restore(out, maths) {
+function restore(out, maths, boldInfo) {
   let s = String(out).replace(/⟦\s*(\d+)\s*⟧/g, (m, n) => maths[n - 1] ?? '').replace(/⟦[^⟧]{0,3}⟧/g, '')
+  if (boldInfo) {
+    if (boldInfo.unsure) {
+      return s.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()
+    }
+    if (boldInfo.isEntire) {
+      return `**${s.replace(/\*\*/g, '').trim()}**`
+    }
+    const words = s.replace(/\*\*/g, '').trim().split(/\s+/).filter(Boolean)
+    const N = boldInfo.origWordCount
+    const M = words.length
+    const k = boldInfo.boldIndex
+    let targetIndex = -1
+
+    if (N === M && k >= 0 && k < M) {
+      targetIndex = k
+    } else if (k === 0 && M > 0) {
+      targetIndex = 0
+    }
+
+    if (targetIndex >= 0 && targetIndex < words.length) {
+      words[targetIndex] = applyBold(words[targetIndex])
+      return words.join(' ').replace(/\s+/g, ' ').trim()
+    }
+    return s.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()
+  }
   if ((s.match(/\*\*/g) || []).length % 2) s = s.replace(/\*\*/g, '')
   return s.replace(/\s+/g, ' ').trim()
 }
@@ -61,7 +132,7 @@ export async function translateStrings(strings, target, key = process.env.SARVAM
     cur.push(k); len += l
   })
   if (cur.length) groups.push(cur)
-  const put = (k, txt) => { out[idx[k]] = restore(txt, prot[k].maths) }
+  const put = (k, txt) => { out[idx[k]] = restore(txt, prot[k].maths, prot[k].boldInfo) }
   const single = async k => {
     const o = await mayura(prot[k].t.slice(0, 950), target, key)
     put(k, intact(o, prot[k].maths) ? o : o + ' ' + prot[k].maths.map((m, i) => (m === '**' || has(o, i) ? '' : m)).join(' '))
