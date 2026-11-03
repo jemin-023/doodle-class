@@ -273,7 +273,37 @@ export default function Learn() {
         {outline.length > 0 && <Outline variant="bar" outline={outline} covered={covered} onJump={jumpTo} />}
         <div className="pg-layout">
           <div className="pg-board" ref={setInkHost}>
-            {thinking && <div className="pg-board-msg">Getting my markers ready…</div>}
+            {thinking && (
+              ncert ? (
+                <div className="pg-board-msg ln-loading-box">
+                  <div className="ln-book" aria-hidden="true">
+                    <svg viewBox="0 0 64 48" width="68" height="52" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 38 C18 35, 28 37, 32 41 C36 37, 46 35, 58 38 L58 10 C46 7, 36 9, 32 13 C28 9, 18 7, 6 10 Z" />
+                      <path d="M32 13 L32 41" />
+                      <g className="ln-page-turn">
+                        <path d="M32 13 C38 10, 48 9, 56 11 L56 37 C48 35, 38 36, 32 41" />
+                      </g>
+                    </svg>
+                  </div>
+                  {outline.length === 0 ? (
+                    <div className="ln-loading-msg">Reading your book…</div>
+                  ) : (
+                    <div className="ln-outline-box">
+                      <div className="ln-loading-msg">Found {outline.length} things to learn</div>
+                      <ul className="ln-outline-preview">
+                        {outline.slice(0, 3).map((item, i) => (
+                          <li key={item.id ?? i} className="ln-outline-item" style={{ animationDelay: `${i * 350}ms` }}>
+                            <span className="ln-bullet">✦</span> {item.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="pg-board-msg">Getting my markers ready…</div>
+              )
+            )}
             {error && <div className="pg-board-msg">Couldn't load the lesson.</div>}
             {steps.length > 0 && !started && (
               <div className="pg-board-msg">

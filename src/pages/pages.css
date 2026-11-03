@@ -121,3 +121,29 @@
 /* Round 3: slot for language switch + share in the Learn sidebar */
 .pg-extras { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
 .pg-extras:empty { display: none; }
+
+/* quiz loading card */
+.qz-wrap.is-loading { max-width: 680px; grid-template-columns: 1fr; }
+.qz-loading-card { text-align: center; padding: 36px 24px 28px; }
+.qz-loading-box { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.qz-loading-title { font-family: var(--font-hand); font-size: 2.2rem; color: var(--ink); margin: 0; }
+.qz-prog-bar { width: 100%; max-width: 360px; height: 20px; border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; background: var(--paper-2); overflow: hidden; box-shadow: 2px 2px 0 var(--ink-faint); margin: 6px auto; }
+.qz-prog-fill { height: 100%; background: var(--marker-orange); transition: width 0.15s ease-out; border-right: 2px solid var(--ink); }
+.qz-loading-tip { font-family: var(--font-body); font-size: 1.15rem; font-style: italic; color: var(--ink-soft); margin: 4px 0 0; min-height: 1.6rem; }
+
+/* learn ncert book reading loading */
+.ln-loading-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; max-width: 480px; margin: 0 auto; }
+.ln-book { color: var(--ink); display: flex; justify-content: center; }
+.ln-page-turn { transform-origin: 32px 27px; animation: ln-flip 1.4s ease-in-out infinite alternate; }
+@keyframes ln-flip { 0% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(.05); opacity: .5; } 100% { transform: scaleX(-.95); opacity: .9; } }
+.ln-loading-msg { font-family: var(--font-hand); font-size: 2.2rem; color: var(--ink); line-height: 1.1; }
+.ln-outline-box { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.ln-outline-preview { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
+.ln-outline-item { font-family: var(--font-body); font-size: 1.15rem; color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px; padding: 8px 14px; box-shadow: 2px 2px 0 var(--ink-faint); opacity: 0; transform: translateY(8px); animation: ln-reveal .4s ease-out forwards; }
+.ln-bullet { color: var(--marker-orange); margin-right: 6px; }
+@keyframes ln-reveal { to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .ln-page-turn { animation: none; transform: none; }
+  .ln-outline-item { animation: none; opacity: 1; transform: none; }
+  .qz-prog-fill { transition: none; }
+}

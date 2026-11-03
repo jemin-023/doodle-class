@@ -11,7 +11,16 @@ import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
 import { SketchButton, SketchCard, Scribble, Icon, ProgressDots, TopBar } from '../components/ui'
 import '../components/Quiz/quiz.css'
+import './pages.css'
 import { DoodleScatter } from '../components/Doodles/Doodles'
+
+const TIPS = [
+  'Tip: read every option!',
+  'Tip: take your time, no rush!',
+  'Tip: think back to what we just learned!',
+  'Tip: eliminate choices that feel wrong!',
+  'Tip: you can always try again!',
+]
 
 const LETTERS = ['A', 'B', 'C', 'D']
 const clean = (s: string) => (s ?? '').replace(/\*\*/g, '')
@@ -113,6 +122,8 @@ export default function QuizPage() {
   const [heard, setHeard] = useState<string | null>(null)
   const canListen = useMemo(() => sttSupported(), [])
   const quizRef = useRef<QuizData | null>(null)
+  const [loadProgress, setLoadProgress] = useState(0)
+  const [tipIdx, setTipIdx] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -212,6 +223,31 @@ export default function QuizPage() {
   const loading = !questions && !error
   const stars = starsFor(score, total)
 
+  useEffect(() => {
+    if (!loading) {
+      setLoadProgress(0)
+      return
+    }
+    const start = Date.now()
+    const id = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000
+      // Advances over about 20 s, never reaching 100% until loaded
+      const p = elapsed < 20
+        ? Math.round((elapsed / 20) * 85)
+        : Math.min(92, Math.round(85 + (1 - Math.exp(-(elapsed - 20) / 8)) * 7))
+      setLoadProgress(p)
+    }, 100)
+    return () => clearInterval(id)
+  }, [loading])
+
+  useEffect(() => {
+    if (!loading) return
+    const id = setInterval(() => {
+      setTipIdx(i => (i + 1) % TIPS.length)
+    }, 4000)
+    return () => clearInterval(id)
+  }, [loading])
+
   let mood: Mood = 'idle'
   let bubble = ''
   let typing = false
@@ -249,9 +285,20 @@ export default function QuizPage() {
           <Icon name={muted ? 'mute' : 'speaker'} size={24} />
         </button>
       </TopBar>
-      <div className="qz-wrap">
+      <div className={`qz-wrap ${loading ? 'is-loading' : ''}`}>
         <main>
-          {loading && <p className="qz-loading">Making your questions…</p>}
+          {loading && (
+            <SketchCard tilt={-0.6} tape className="qz-card qz-loading-card">
+              <div className="qz-loading-box">
+                <Character id={characterId} mood="thinking" size={140} />
+                <h2 className="qz-loading-title">{character.name} is writing your quiz…</h2>
+                <div className="qz-prog-bar" role="progressbar" aria-valuenow={loadProgress} aria-valuemin={0} aria-valuemax={100} aria-label="Loading quiz">
+                  <div className="qz-prog-fill" style={{ width: `${loadProgress}%` }} />
+                </div>
+                <p className="qz-loading-tip">{TIPS[tipIdx]}</p>
+              </div>
+            </SketchCard>
+          )}
 
           {error && (
             <SketchCard tilt={-0.6} tape className="qz-error">
@@ -330,10 +377,12 @@ export default function QuizPage() {
           )}
         </main>
 
-        <aside className="qz-side">
-          <Character id={characterId} mood={mood} size={200} />
-          <SpeechBubble text={bubble} side="left" typing={typing} />
-        </aside>
+        {!loading && (
+          <aside className="qz-side">
+            <Character id={characterId} mood={mood} size={200} />
+            <SpeechBubble text={bubble} side="left" typing={typing} />
+          </aside>
+        )}
       </div>
     </div>
   )

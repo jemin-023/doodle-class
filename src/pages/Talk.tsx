@@ -29,6 +29,7 @@ export default function Talk() {
   const empties = useRef(0)
   const [text, setText] = useState('')
   const [hands, setHands] = useState(false)
+  const [headphoneHint, setHeadphoneHint] = useState(false)
   const handsRef = useRef(false)
   const linesRef = useRef<Line[]>([])
   const alive = useRef(true)
@@ -56,13 +57,24 @@ export default function Talk() {
         ctx.createMediaStreamSource(stream).connect(an)
         const buf = new Uint8Array(an.fftSize)
         let loudSince = 0
-        const armedAt = Date.now() + 800     // ignore the first moments (speaker start-up noise)
+        let baselineMax = 0
+        const start = Date.now()
+        const calibrateUntil = start + 600 // measure during the first 600 ms of the teacher speaking
         poll = setInterval(() => {
           an.getByteTimeDomainData(buf)
           let s = 0; for (const v of buf) { const d = (v - 128) / 128; s += d * d }
           const rms = Math.sqrt(s / buf.length), now = Date.now()
-          if (rms > 0.1 && now > armedAt) { if (!loudSince) loudSince = now; else if (now - loudSince > 350) { stopSpeaking() } }
-          else loudSince = 0
+          if (now <= calibrateUntil) {
+            if (rms > baselineMax) baselineMax = rms
+            return
+          }
+          const threshold = Math.max(0.12, 2.5 * baselineMax)
+          if (rms > threshold) {
+            if (!loudSince) loudSince = now
+            else if (now - loudSince >= 400) { stopSpeaking() }
+          } else {
+            loudSince = 0
+          }
         }, 50)
       } catch { /* no mic: no barge-in */ }
     })()
@@ -118,6 +130,19 @@ export default function Talk() {
 
   const start = () => { setStarted(true); void send('') }
   const submit = () => { const t = text.trim(); if (!t || busy.current) return; setText(''); void send(t) }
+  const toggleHands = (checked: boolean) => {
+    setHands(checked)
+    if (checked) {
+      let seen = false
+      try { seen = !!localStorage.getItem('dc_handsfree_hint') } catch { /* ignore */ }
+      if (!seen) {
+        setHeadphoneHint(true)
+        try { localStorage.setItem('dc_handsfree_hint', '1') } catch { /* ignore */ }
+      }
+    } else {
+      setHeadphoneHint(false)
+    }
+  }
 
   return (
     <div className="talk">
@@ -154,7 +179,16 @@ export default function Talk() {
               <TextInput value={text} onChange={e => setText(e.target.value)} placeholder="Type here..." />
               <SketchButton type="submit" color={ch.color}>Send</SketchButton>
             </form>
-            {canMic && <label className="talk-hands"><input type="checkbox" checked={hands} onChange={e => setHands(e.target.checked)} /> Hands-free</label>}
+            {canMic && (
+              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                <label className="talk-hands"><input type="checkbox" checked={hands} onChange={e => toggleHands(e.target.checked)} /> Hands-free</label>
+                {headphoneHint && (
+                  <span style={{ fontSize: '0.95rem', color: 'var(--ink-soft, #5c574f)', fontFamily: 'var(--font-hand, Caveat)' }}>
+                    Use headphones for hands-free
+                  </span>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

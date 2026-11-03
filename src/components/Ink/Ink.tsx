@@ -54,8 +54,12 @@ export default function InkLayer({ host, onCircle, marked }: InkLayerProps) {
   const strokesRef = useRef<Pt[][]>([])
   const doneIdx = useRef(0) // strokes before this index were already sent to hit-testing
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const autoExitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const active = useRef<number | null>(null)
   const curRef = useRef<Pt[]>([])
+  const pointers = useRef<Map<number, Pt>>(new Map())
+  const lastCenter = useRef<Pt | null>(null)
+  const isTwoFinger = useRef(false)
   const cbRef = useRef(onCircle)
   cbRef.current = onCircle
 
@@ -79,7 +83,17 @@ export default function InkLayer({ host, onCircle, marked }: InkLayerProps) {
     return () => cancelAnimationFrame(raf)
   }, [busy, host, scrollEl])
 
-  useEffect(() => () => { clearTimeout(timer.current) }, [])
+  useEffect(() => () => {
+    clearTimeout(timer.current)
+    clearTimeout(autoExitTimer.current)
+  }, [])
+
+  useEffect(() => {
+    if (marked) {
+      clearTimeout(autoExitTimer.current)
+      autoExitTimer.current = setTimeout(() => setPen(false), 2000)
+    }
+  }, [marked])
 
   const toContent = (e: React.PointerEvent): Pt | null => {
     const se = scrollEl(); if (!se) return null
@@ -98,10 +112,26 @@ export default function InkLayer({ host, onCircle, marked }: InkLayerProps) {
     let hit: InkHit | null = null
     try { hit = hitTest(host, se, bb) } catch { hit = null }
     cbRef.current(hit)
+    clearTimeout(autoExitTimer.current)
+    autoExitTimer.current = setTimeout(() => setPen(false), 2000)
   }
 
   const down = (e: React.PointerEvent) => {
-    if (!pen || active.current !== null || (e.pointerType === 'mouse' && e.button !== 0)) return
+    if (!pen) return
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size >= 2) {
+      isTwoFinger.current = true
+      if (active.current !== null) {
+        try { (e.currentTarget as Element).releasePointerCapture(active.current) } catch { /* ignore */ }
+        active.current = null
+        curRef.current = []
+        setCur(null)
+      }
+      try { (e.currentTarget as Element).setPointerCapture(e.pointerId) } catch { /* ignore */ }
+      return
+    }
+    if (isTwoFinger.current) return
+    if (active.current !== null || (e.pointerType === 'mouse' && e.button !== 0)) return
     const p = toContent(e); if (!p) return
     e.preventDefault()
     try { (e.currentTarget as Element).setPointerCapture(e.pointerId) } catch { /* ignore */ }
@@ -110,6 +140,25 @@ export default function InkLayer({ host, onCircle, marked }: InkLayerProps) {
     curRef.current = [p]; setCur([p])
   }
   const move = (e: React.PointerEvent) => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size >= 2 || isTwoFinger.current) {
+      if (pointers.current.size >= 2) {
+        let sx = 0, sy = 0
+        for (const pt of pointers.current.values()) {
+          sx += pt.x
+          sy += pt.y
+        }
+        const cx = sx / pointers.current.size
+        const cy = sy / pointers.current.size
+        if (lastCenter.current) {
+          const dy = lastCenter.current.y - cy
+          const dx = lastCenter.current.x - cx
+          scrollEl()?.scrollBy({ top: dy, left: dx })
+        }
+        lastCenter.current = { x: cx, y: cy }
+      }
+      return
+    }
     if (active.current !== e.pointerId) return
     const evs = (e.nativeEvent as PointerEvent).getCoalescedEvents?.() ?? []
     const se = scrollEl(); if (!se) return
@@ -126,6 +175,13 @@ export default function InkLayer({ host, onCircle, marked }: InkLayerProps) {
     setCur(pts.slice())
   }
   const up = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size < 2) {
+      lastCenter.current = null
+    }
+    if (pointers.current.size === 0) {
+      isTwoFinger.current = false
+    }
     if (active.current !== e.pointerId) return
     active.current = null
     const pts = curRef.current
@@ -140,10 +196,17 @@ export default function InkLayer({ host, onCircle, marked }: InkLayerProps) {
 
   const clear = () => {
     clearTimeout(timer.current)
+    clearTimeout(autoExitTimer.current)
     strokesRef.current = []; doneIdx.current = 0
     setStrokes([]); setCur(null); curRef.current = []; active.current = null
+    pointers.current.clear(); lastCenter.current = null; isTwoFinger.current = false
   }
-  const done = () => { setPen(false); clearTimeout(timer.current); if (strokesRef.current.length > doneIdx.current) fire() }
+  const done = () => {
+    setPen(false)
+    clearTimeout(timer.current)
+    clearTimeout(autoExitTimer.current)
+    if (strokesRef.current.length > doneIdx.current) fire()
+  }
 
   if (!host) return null
   const hasInk = strokes.length > 0 || !!cur
