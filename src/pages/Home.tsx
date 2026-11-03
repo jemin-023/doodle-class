@@ -50,7 +50,7 @@ export default function Home() {
       <TopBar>
         <span className="pg-stars"><Icon name="star" size={20} /> {stars} {stars === 1 ? 'star' : 'stars'}</span>
       </TopBar>
-      <main className="pg-wrap">
+      <main className="pg-wrap pg-sheet">
         <header className="pg-head">
           <h1>What do you want to <span className="pg-scribbled">learn<span className="pg-scribble"><Scribble kind="underline" color="var(--marker-red)" width={160} height={14} /></span></span> today?</h1>
           <p className="pg-sub">Pick a teacher, name a topic, and watch the lesson get written out for you.</p>
@@ -71,9 +71,9 @@ export default function Home() {
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCid(c.id) } }}
                   onMouseEnter={() => setHover(c.id)} onMouseLeave={() => setHover(null)}
                   onFocus={() => setHover(c.id)} onBlur={() => setHover(null)}>
-                  <div className="pg-teacher-in">
+                  <div className="pg-teacher-in" style={{ ['--acc' as string]: c.color }}>
                     <Character id={c.id} mood={hover === c.id ? 'happy' : 'idle'} size={120} />
-                    <div className="pg-tname" style={sel ? { color: c.color } : undefined}>{c.name}</div>
+                    <div className="pg-tname">{c.name}</div>
                     <div className="pg-tsub">{c.subject}</div>
                     <div className="pg-tline">{c.tagline}</div>
                   </div>
@@ -114,10 +114,10 @@ export default function Home() {
           </div>
         </section>
 
-        <p style={{ fontFamily: 'var(--font-hand)', fontSize: 24, margin: '24px 0 0', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          <Link to="/progress" style={{ color: 'var(--marker-blue)' }}>See my progress →</Link>
-          <Link to={`/journey/${cid}`} style={{ color: 'var(--marker-blue)' }}>My chapter map →</Link>
-          <Link to="/syllabus" style={{ color: 'var(--marker-blue)' }}>Upload my syllabus →</Link>
+        <p className="pg-links" style={{ margin: '32px 0 0', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <Link to="/progress" >See my progress →</Link>
+          <Link to={`/journey/${cid}`} >My chapter map →</Link>
+          <Link to="/syllabus" >Upload my syllabus →</Link>
         </p>
 
         {history.length > 0 && (

@@ -55,10 +55,11 @@ Rules:
 - Each "say" is 1-3 SHORT kid-friendly sentences, with a hint of ${name}'s personality.
 - Each step's "board" has 1-4 items, text short like a teacher writes on a board (max ~8 words).
 - Item shapes: {"kind":"title"|"text"|"bullet"|"equation"|"highlight"|"example","text":string} or {"kind":"drawing","shape":"circle"|"arrow"|"box"|"star"|"underline"|"divider","label"?:string}.
+- In board text (not title/equation), wrap 1-2 key words in **double asterisks**, e.g. "Plants need **sunlight**".
 - Step 1 board starts with a title. Use "equation" for maths, "highlight" for the key idea, drawings sparingly (at most 2 in total).
 - Last step is a quick recap. Never put a newline inside a JSON object.`
     let buf = ''
-    for await (const t of chatStream([{ role: 'system', content: sys }, { role: 'user', content: user }])) {
+    for await (const t of chatStream([{ role: 'system', content: sys }, { role: 'user', content: user }], { max_tokens: 1800 })) {
       buf += t
       let i
       while ((i = buf.indexOf('\n')) >= 0) { handleLine(buf.slice(0, i)); buf = buf.slice(i + 1) }

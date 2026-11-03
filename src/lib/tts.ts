@@ -27,7 +27,8 @@ function wait(ms: number, myGen: number): Promise<void> {
   })
 }
 
-function playChunks(chunks: string[], myGen: number): Promise<void> {
+/** Plays one audio clip (base64 mp3 chunks) to the end. */
+function playClip(chunks: string[], myGen: number): Promise<void> {
   return new Promise(resolve => {
     let i = 0
     let audio: HTMLAudioElement | null = null
@@ -37,13 +38,25 @@ function playChunks(chunks: string[], myGen: number): Promise<void> {
     const next = () => {
       if (finished || myGen !== gen) return finish()
       if (i >= chunks.length) return finish()
-      audio = new Audio('data:audio/wav;base64,' + chunks[i++])
+      audio = new Audio('data:audio/mpeg;base64,' + chunks[i++])
       audio.onended = next
       audio.onerror = next
       audio.play().catch(next)
     }
     next()
   })
+}
+
+/** Split into sentence-sized pieces (tiny ones merged) so they can be fetched in parallel. */
+export function splitSentences(text: string): string[] {
+  const parts = text.split(/(?<=[.!?\u0964\u0965])\s+/).map(p => p.trim()).filter(Boolean)
+  const out: string[] = []
+  for (const p of parts) {
+    if (out.length && out[out.length - 1].length < 30) out[out.length - 1] += ' ' + p
+    else out.push(p)
+  }
+  if (out.length > 1 && out[out.length - 1].length < 15) out[out.length - 2] += ' ' + out.pop()
+  return out.length ? out : [text]
 }
 
 function browserSpeak(text: string, language: LanguageCode, myGen: number): Promise<void> {
@@ -95,6 +108,7 @@ function getChunks(text: string, opts: Opts): Promise<string[] | undefined> {
 }
 
 export async function speak(text: string, opts: Opts): Promise<void> {
+  text = text.replace(/\*\*/g, "")
   const myGen = ++gen
   // keep earlier stop callbacks from leaking: a new speak supersedes any old playback
   const old = stopFns; stopFns = []; old.forEach(f => { try { f() } catch { /* ignore */ } })
@@ -102,15 +116,20 @@ export async function speak(text: string, opts: Opts): Promise<void> {
 
   if (muted) return wait(Math.max(1500, text.length * 55), myGen)
 
-  const chunks = await getChunks(text, opts)
-  if (myGen !== gen) return              // stopped or superseded while fetching
-  if (muted) return wait(Math.max(1500, text.length * 55), myGen)
-  if (chunks) return playChunks(chunks, myGen)
-  return browserSpeak(text, opts.language, myGen)
+  const sentences = splitSentences(text)
+  const pending = sentences.map(s => getChunks(s, opts))   // all requested in parallel
+  for (let i = 0; i < sentences.length; i++) {
+    const chunks = await pending[i]
+    if (myGen !== gen) return              // stopped or superseded while fetching
+    if (muted) return wait(Math.max(1500, text.length * 55), myGen)
+    if (chunks) await playClip(chunks, myGen)
+    else await browserSpeak(sentences[i], opts.language, myGen)
+  }
 }
 
-/** Fetch + cache TTS audio for text ahead of time so the next step plays instantly. Fire-and-forget. */
+/** Fetch + cache TTS audio for text ahead of time so it plays instantly. Fire-and-forget. */
 export function prefetchSpeech(text: string, opts: Opts): void {
-  if (!text) return
-  void getChunks(text, opts)
+  text = text.replace(/\*\*/g, "")
+  if (!text || muted) return
+  splitSentences(text).forEach(s => { void getChunks(s, opts) })
 }

@@ -9,6 +9,7 @@ import { TopBar, SketchButton } from '../components/ui'
 import Character from '../components/Characters/Character'
 import { BossArt, HPBar, Heart, XPBadge } from '../components/Game/Game'
 import '../components/Game/game.css'
+import '../pages/pages.css'
 
 const TIME = 15
 const R = 22, CIRC = 2 * Math.PI * R

@@ -1,11 +1,11 @@
 .wb-root { position: relative; width: 100%; min-height: 420px; height: 100%; display: flex; flex-direction: column; background: var(--board); color: var(--ink); }
 .wb-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .wb-scroll { position: relative; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1.6rem 1.8rem 1rem; scrollbar-width: thin; scrollbar-color: var(--ink-faint) transparent; }
-.wb-tray { position: relative; flex: 0 0 22px; margin: 0 1.4rem 8px; }
+.wb-tray { position: relative; flex: 0 0 40px; margin: 0 1.4rem 6px; }
 .wb-frame svg, .wb-tray svg, .wb-line svg, .wb-sep svg, .wb-shape svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .wb-sep { position: relative; height: 14px; margin: .5rem 0 .3rem; opacity: .7; }
 .wb-line { position: relative; font-family: var(--font-hand); line-height: 1.25; margin: 0 0 .55rem; transform-origin: left center; overflow-wrap: anywhere; }
-.wb-title { font-size: 2.4rem; font-weight: 700; margin-top: .3rem; }
+.wb-title { font-size: 2.6rem; font-weight: 700; margin-top: .3rem; }
 .wb-title-text { position: relative; display: inline-block; padding-bottom: .55rem; }
 .wb-text { font-size: 1.6rem; }
 .wb-bullet { display: flex; gap: .6rem; align-items: baseline; font-size: 1.6rem; padding-left: .6rem; }
@@ -30,3 +30,18 @@
   .wb-text, .wb-bullet { font-size: 1.4rem; }
   .wb-equation { font-size: 1.7rem; }
 }
+
+/* marker colours */
+.wb-s-em { background-color: rgba(255, 224, 102, .75); padding: 0 .2em; margin: 0 -.05em; border-radius: 3px 8px 4px 7px; box-decoration-break: clone; -webkit-box-decoration-break: clone; color: var(--ink); }
+.wb-s-caps { color: var(--marker-red); font-weight: 700; letter-spacing: .03em; }
+.wb-s-num { color: var(--marker-orange); font-weight: 700; }
+.wb-bullet .wb-s-plain { color: inherit; }
+.wb-bullet .wb-s-em, .wb-bullet .wb-s-caps, .wb-bullet .wb-s-num { color: var(--ink); }
+.wb-bullet .wb-s-caps { color: var(--marker-red); }
+.wb-s-eq { color: var(--marker-blue); }
+.wb-s-op { color: var(--marker-red); font-weight: 700; padding: 0 .1em; }
+.wb-text .wb-s-plain { color: var(--ink); }
+.wb-highlight .wb-hl-text { color: var(--ink); }
+.wb-example { color: var(--marker-green); }
+.wb-example .wb-s-plain { color: var(--marker-green); }
+.wb-eg { color: var(--marker-green); font-weight: 700; }

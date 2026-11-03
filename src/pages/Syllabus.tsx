@@ -4,6 +4,7 @@ import { TopBar, SketchCard, SketchButton, Chip } from '../components/ui'
 import Character from '../components/Characters/Character'
 import { saveCustomBook, type CustomBook } from '../lib/journey'
 import './syllabus.css'
+import '../pages/pages.css'
 
 const CAP = 8000
 

@@ -5,6 +5,7 @@ import { TopBar, SketchCard } from '../components/ui'
 import { CharacterAvatar } from '../components/Characters/Character'
 import { BossArt, XPBadge } from '../components/Game/Game'
 import '../components/Game/game.css'
+import '../pages/pages.css'
 
 const PTS = [[70, 120], [190, 60], [310, 125], [420, 70]]
 const PATH = 'M70 120 C110 60, 150 40, 190 60 S270 130, 310 125 S380 60, 420 70 S500 110, 520 100'

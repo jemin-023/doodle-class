@@ -12,7 +12,7 @@ export default function SpeechBubble({ text, side = 'left', typing = false }: Sp
       {typing ? (
         <span className="sb-dots" aria-label="typing"><i /><i /><i /></span>
       ) : (
-        <span className="sb-text" key={text}>{text}</span>
+        <span className="sb-text" key={text}>{text.replace(/\*\*/g, "")}</span>
       )}
     </div>
   )

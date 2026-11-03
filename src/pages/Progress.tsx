@@ -5,6 +5,7 @@ import { CharacterAvatar } from '../components/Characters/Character'
 import { SketchButton, SketchCard, TopBar } from '../components/ui'
 import { getDueReviews, getMastery, getStreak, getSubjectStats, getTotalStars } from '../lib/progress'
 import './progress.css'
+import '../pages/pages.css'
 
 function Bar({ value, color }: { value: number; color: string }) {
   const id = useId().replace(/:/g, '')

@@ -17,6 +17,42 @@ const INK = '#23211e'
 const INK_FAINT = '#9a948a'
 const HIGHLIGHT = '#ffe066'
 const DEFAULT_ACCENT = '#2f5fd0'
+const M_BLUE = '#2f5fd0'
+const M_RED = '#d9472b'
+const M_GREEN = '#2f8a4c'
+const M_ORANGE = '#d9822b'
+const CYCLE = [M_BLUE, M_GREEN, M_ORANGE]
+const DRAW_CYCLE = [M_RED, M_ORANGE]
+
+function isReddish(hex: string): boolean {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim())
+  if (!m) return false
+  const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16)
+  return r > 170 && g < 120 && b < 120
+}
+
+/* ---------- rich text: **bold** -> highlighter, CAPS -> red, numbers -> orange ---------- */
+type SegKind = 'plain' | 'em' | 'caps' | 'num' | 'op' | 'eq'
+interface Seg { kind: SegKind; text: string }
+
+function parseRich(raw: string, mode: 'text' | 'equation'): Seg[] {
+  const out: Seg[] = []
+  if (mode === 'equation') {
+    raw.replace(/\*\*/g, '').split(/([=+\-−×÷*/<>≈]+)/).forEach(t => {
+      if (t) out.push({ kind: /^[=+\-−×÷*/<>≈]+$/.test(t) ? 'op' : 'eq', text: t })
+    })
+    return out
+  }
+  raw.split(/(\*\*[^*]+\*\*)/).forEach(part => {
+    if (!part) return
+    if (/^\*\*[^*]+\*\*$/.test(part)) { out.push({ kind: 'em', text: part.slice(2, -2) }); return }
+    part.split(/(\b[A-Z][A-Z0-9]{1,}\b|\d+(?:[.,/]\d+)?)/).forEach(t => {
+      if (!t) return
+      out.push({ kind: /^[A-Z][A-Z0-9]+$/.test(t) ? 'caps' : /^\d/.test(t) ? 'num' : 'plain', text: t })
+    })
+  })
+  return out.length ? out : [{ kind: 'plain', text: '' }]
+}
 
 function hash(s: string): number {
   let h = 5381
@@ -177,10 +213,11 @@ interface BoardLineProps {
   animate: boolean
   accent: string
   speed: number
+  index: number
   onDone?: () => void
 }
 
-function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardLineProps) {
+function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }: BoardLineProps) {
   const [animate] = useState(animateProp) // latched at mount
   const doneRef = useRef(onDone)
   doneRef.current = onDone
@@ -191,8 +228,13 @@ function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardL
     doneRef.current?.()
   }, [])
 
-  const text = item.kind === 'drawing' ? '' : item.text
+  const rawText = item.kind === 'drawing' ? '' : item.text
+  const segs = useMemo(() => parseRich(rawText, item.kind === 'equation' ? 'equation' : 'text'), [rawText, item.kind])
+  const text = useMemo(() => segs.map(g => g.text).join(''), [segs])
   const chars = useMemo(() => Array.from(text), [text])
+  const lineColor = CYCLE[index % CYCLE.length]
+  const drawColor = DRAW_CYCLE[hash(item.kind === 'drawing' ? item.shape + (item.label ?? '') : '') % DRAW_CYCLE.length]
+  const underColor = isReddish(accent) ? M_BLUE : M_RED
   const seed = useMemo(() => hash(item.kind + '|' + text + (item.kind === 'drawing' ? item.shape + (item.label ?? '') : '')), [item, text])
   const [n, setN] = useState(animate ? 0 : chars.length)
   const [drawn, setDrawn] = useState(!animate)
@@ -224,11 +266,23 @@ function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardL
 
   const onDecorDone = useCallback(() => { setDrawn(true); if (animate) finish() }, [animate, finish])
 
+  let pos = 0
   const revealed = (
     <>
-      <span>{chars.slice(0, n).join('')}</span>
-      {animate && !typed && <span className="wb-tip" style={{ background: accent }} />}
-      {!typed && <span className="wb-hidden">{chars.slice(n).join('')}</span>}
+      {segs.map((g, k) => {
+        const gc = Array.from(g.text)
+        const vis = Math.max(0, Math.min(gc.length, n - pos))
+        const start = pos
+        pos += gc.length
+        const cursor = animate && !typed && n >= start && n < pos
+        return (
+          <span key={k} className={'wb-s wb-s-' + g.kind}>
+            {gc.slice(0, vis).join('')}
+            {cursor && <span className="wb-tip" style={{ background: lineColor }} />}
+            {vis < gc.length && <span className="wb-hidden">{gc.slice(vis).join('')}</span>}
+          </span>
+        )
+      })}
     </>
   )
   const showDecor = !animate || typed
@@ -238,10 +292,10 @@ function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardL
     case 'title':
       return (
         <div className="wb-line wb-title" style={style}>
-          <span className="wb-title-text">
+          <span className="wb-title-text" style={{ color: accent }}>
             {revealed}
             <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 14 }}>
-              {showDecor && <RoughSvg draw={drawUnderline(accent, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
+              {showDecor && <RoughSvg draw={drawUnderline(underColor, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
             </span>
           </span>
         </div>
@@ -250,11 +304,11 @@ function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardL
       return <div className="wb-line wb-text" style={style}>{revealed}</div>
     case 'bullet':
       return (
-        <div className="wb-line wb-bullet" style={style}>
+        <div className="wb-line wb-bullet" style={{ ...style, color: lineColor }}>
           <span className="wb-dot">
-            <RoughSvg animate={false} draw={(rc, w, h) => [rc.ellipse(w / 2, h / 2, w - 5, h - 5, { fill: accent, fillStyle: 'solid', stroke: accent, strokeWidth: 1.4, roughness: 1.6, seed })]} />
+            <RoughSvg animate={false} draw={(rc, w, h) => [rc.ellipse(w / 2, h / 2, w - 5, h - 5, { fill: lineColor, fillStyle: 'solid', stroke: lineColor, strokeWidth: 1.4, roughness: 1.6, seed })]} />
           </span>
-          <span>{revealed}</span>
+          <span className="wb-btext">{revealed}</span>
         </div>
       )
     case 'equation':
@@ -263,7 +317,7 @@ function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardL
       return (
         <div className="wb-line wb-highlight-wrap" style={style}>
           <span className="wb-highlight">
-            {showDecor && <RoughSvg draw={drawHighlightBox(accent, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
+            {showDecor && <RoughSvg draw={drawHighlightBox(M_ORANGE, seed)} animate={animate} duration={dur} onDone={onDecorDone} />}
             <span className="wb-hl-text">{revealed}</span>
           </span>
         </div>
@@ -280,9 +334,9 @@ function BoardLine({ item, animate: animateProp, accent, speed, onDone }: BoardL
       return (
         <div className="wb-line wb-drawing" style={style}>
           <div className={'wb-shape' + (flex ? ' wb-shape-flex' : '')} style={{ width: sz.w, height: sz.h }}>
-            <RoughSvg draw={drawShape(item.shape, accent, seed)} animate={animate} duration={800 / speed} onDone={onDecorDone} />
+            <RoughSvg draw={drawShape(item.shape, drawColor, seed)} animate={animate} duration={800 / speed} onDone={onDecorDone} />
           </div>
-          {item.label && <span className={'wb-label' + (drawn ? ' on' : '')}>{item.label}</span>}
+          {item.label && <span className={'wb-label' + (drawn ? ' on' : '')} style={{ color: drawColor }}>{item.label}</span>}
         </div>
       )
     }
@@ -357,6 +411,7 @@ export default function Whiteboard({ steps, currentStep, accent = DEFAULT_ACCENT
           item={list[i]}
           animate={animating}
           accent={accent}
+          index={i + s}
           speed={spd}
           onDone={animating ? () => onItemDone(i) : undefined}
         />
@@ -371,11 +426,17 @@ export default function Whiteboard({ steps, currentStep, accent = DEFAULT_ACCENT
       </div>
       <div className="wb-scroll" ref={scrollRef}>{rendered}</div>
       <div className="wb-tray">
-        <RoughSvg animate={false} draw={(rc, w, h) => [
-          rc.line(8, h - 6, w - 8, h - 6, { stroke: INK_FAINT, strokeWidth: 1.6, roughness: 1.4, seed: 11 }),
-          rc.rectangle(w * 0.08, h - 15, 34, 7, { stroke: accent, strokeWidth: 1.4, roughness: 1, seed: 12, fill: accent, fillStyle: 'hachure', hachureGap: 3 }),
-          rc.rectangle(w * 0.08 + 44, h - 15, 30, 7, { stroke: INK, strokeWidth: 1.4, roughness: 1, seed: 13, fill: INK, fillStyle: 'hachure', hachureGap: 3 }),
-        ]} />
+        <RoughSvg animate={false} draw={(rc, w, h) => {
+          const cols = [M_BLUE, M_RED, M_GREEN, M_ORANGE]
+          const out: SVGElement[] = [rc.line(8, h - 4, w - 8, h - 4, { stroke: INK_FAINT, strokeWidth: 1.6, roughness: 1.4, seed: 11 })]
+          cols.forEach((c, i) => {
+            const x = 14 + i * 62, y = h - 22
+            out.push(rc.rectangle(x, y, 44, 14, { stroke: INK, strokeWidth: 1.3, roughness: 1, seed: 20 + i, fill: c, fillStyle: 'solid' }))
+            out.push(rc.rectangle(x + 44, y + 2, 12, 10, { stroke: INK, strokeWidth: 1.2, roughness: 1, seed: 30 + i, fill: '#f3eee2', fillStyle: 'solid' }))
+            out.push(rc.line(x + 8, y + 3, x + 30, y + 3, { stroke: '#fffefa', strokeWidth: 1.2, roughness: 1, seed: 40 + i }))
+          })
+          return out
+        }} />
       </div>
     </div>
   )

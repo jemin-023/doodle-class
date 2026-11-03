@@ -11,6 +11,9 @@
   --marker-blue: #2f5fd0;
   --marker-red: #d9472b;
   --marker-green: #2f8a4c;
+  --marker-orange: #d9822b;
+  --marker-yellow: #f0c93a;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 16px; --sp-4: 24px; --sp-5: 40px; --sp-6: 64px;
   --highlight: #ffe066;     /* highlighter yellow */
   --tape: rgba(240, 222, 160, 0.75);
   --ok: #2f8a4c;
@@ -39,4 +42,8 @@ h2 { font-size: 2.2rem; }
 h3 { font-size: 1.6rem; }
 button { font: inherit; cursor: pointer; }
 a { color: var(--marker-blue); }
+a:hover { color: var(--marker-red); }
+:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
+img, svg { max-width: 100%; }
+body { overflow-x: hidden; }
 ::selection { background: var(--highlight); }

@@ -12,6 +12,8 @@ import { listen, stopListening, sttSupported } from '../lib/stt'
 import type { ListenState } from '../lib/stt'
 import './pages.css'
 
+const ACK = 'Good question! Let me show you.'
+
 export default function Learn() {
   const { characterId = 'tara' } = useParams()
   const [sp] = useSearchParams()
@@ -57,6 +59,7 @@ export default function Learn() {
       onStep: (st, idx) => {
         if (seen.current.has(idx)) return
         seen.current.add(idx)
+        prefetchSpeech(st.say, { speaker: ch.speaker, language: lang })
         setLesson(l => ({
           topic: l?.topic ?? topic, subject: l?.subject ?? '', characterId, language: lang,
           ...(l ?? {}), steps: [...(l?.steps ?? []), st],
@@ -69,6 +72,7 @@ export default function Learn() {
   }, [topic, characterId, lang, grade])
 
   useEffect(() => () => { runId.current++; stopSpeaking(); stopListening() }, [])
+  useEffect(() => { prefetchSpeech(ACK, { speaker: ch.speaker, language: lang }) }, [ch.speaker, lang])
 
   const steps = lesson?.steps ?? []
   const last = steps.length - 1
@@ -119,6 +123,7 @@ export default function Learn() {
     const q = question.trim()
     if (!q || asking || !lesson) return
     setAsking(true); setPlaying(false); stopSpeaking(); setMood('thinking'); setWaiting(false)
+    if (lang === 'en-IN') void speak(ACK, { speaker: ch.speaker, language: lang }).catch(() => {})
     try {
       const ans = await askTeacher({ question: q, lesson, characterId, language: lang, grade })
       const ns = { ...ans, board: [{ kind: 'text' as const, text: 'Q: ' + q }, ...ans.board] }

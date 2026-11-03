@@ -58,7 +58,7 @@ async function ttsOne(text, speaker, language, key) {
   return fetch('https://api.sarvam.ai/text-to-speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
-    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3' }),
+    body: JSON.stringify({ text, target_language_code: language, speaker, model: 'bulbul:v3', output_audio_codec: 'mp3', speech_sample_rate: 16000 }),
   })
 }
 
@@ -66,17 +66,16 @@ export async function tts(text, speaker = 'priya', language = 'en-IN') {
   const key = process.env.SARVAM_API_KEY
   if (!key) throw new Error('no SARVAM_API_KEY')
   const chunks = chunkText(text)
-  const audio = []
   let spk = speaker
-  for (const c of chunks) {
+  const one = async c => {
     let r = await ttsOne(c, spk, language, key)
     if (!r.ok && spk !== 'priya') { spk = 'priya'; r = await ttsOne(c, spk, language, key) }
     if (!r.ok) throw new Error(`sarvam tts ${r.status}: ${(await r.text()).slice(0, 200)}`)
     const j = await r.json()
     if (!j?.audios?.[0]) throw new Error('tts: no audio')
-    audio.push(j.audios[0])
+    return j.audios[0]
   }
-  return audio
+  return Promise.all(chunks.map(one))
 }
 
 export const BOARD_KINDS = ['title', 'text', 'bullet', 'equation', 'highlight', 'example', 'drawing']

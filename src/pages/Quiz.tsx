@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { LanguageCode, Lesson, Mood, Quiz as QuizData, QuizQuestion } from '../types'
 import { getCharacter } from '../characters/registry'
 import { generateQuiz } from '../lib/api'
-import { speak, stopSpeaking, isMuted, setMuted } from '../lib/tts'
+import { speak, stopSpeaking, isMuted, setMuted, prefetchSpeech } from '../lib/tts'
 import { saveResult, starsFor, recordAnswer } from '../lib/progress'
 import { markTopicDoneByTopic } from '../lib/journey'
 import { listen, stopListening, sttSupported, type ListenState } from '../lib/stt'
@@ -111,6 +111,7 @@ export default function QuizPage() {
         if (cancelled) return
         if (!q.questions?.length) throw new Error('empty')
         quizRef.current = q
+        q.questions.forEach(qq => { if (qq.explanation) prefetchSpeech(qq.explanation, { speaker: character.speaker, language }) })
         setQuestions(q.questions)
       })
       .catch(() => { if (!cancelled) setError(true) })

@@ -8,14 +8,15 @@ export default async function handler(req, res) {
     const name = CHAR_NAMES[id] || 'Tara'
     const lang = LANG_NAMES[b.language] || 'English'
     const grade = Number(b.grade) || 5
-    const ctx = (b.lesson?.steps || []).map(s => s.say).join(' ').slice(0, 1500)
+    const ctx = (b.lesson?.steps || []).map(s => s.say).join(' ').slice(0, 600)
     const sys = `You are ${PERSONA[id] || name}, a friendly teacher for children. Reply with ONE JSON object only, no markdown.`
     const user = `You are teaching "${b.lesson?.topic || ''}" to a grade ${grade} student. Lesson so far: ${ctx}
 The student asks: "${question}"
 Answer in ${lang}, in character, 2-3 SHORT sentences a grade ${grade} child understands.
 JSON: {"say": string, "board": [item, ...]} with 1-4 short board items related to the lesson.
+In board text wrap 1-2 key words in **double asterisks**.
 Item shapes: {"kind":"title"|"text"|"bullet"|"equation"|"highlight"|"example","text":string} or {"kind":"drawing","shape":"circle"|"arrow"|"box"|"star"|"underline"|"divider","label"?:string}.`
-    const out = await chat([{ role: 'system', content: sys }, { role: 'user', content: user }], { temperature: 0.5, max_tokens: 800 })
+    const out = await chat([{ role: 'system', content: sys }, { role: 'user', content: user }], { temperature: 0.5, max_tokens: 400 })
     const step = sanitizeStep(extractJSON(out))
     if (!step) throw new Error('bad step')
     return res.status(200).json(step)
