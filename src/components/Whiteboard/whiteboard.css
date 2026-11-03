@@ -80,5 +80,139 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .wb-vcap, .wb-dlab, .wb-tin { transition: none; }
+  .wb-dg-drawn .wb-anim-water-arrows path,
+  .wb-dg-drawn .wb-anim-planets,
+  .wb-dg-drawn .wb-anim-field-lines,
+  .wb-dg-drawn .wb-anim-bulb-glow {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
 }
 .wb-eq-plain { font-family: var(--font-hand); font-size: 1.6em; color: inherit; text-align: center; }
+
+/* ---- subtle diagram animations (E3) ---- */
+.wb-dg-drawn .wb-anim-water-arrows path {
+  stroke-dasharray: 6 5 !important;
+  animation: wb-water-flow 1.4s linear infinite;
+}
+@keyframes wb-water-flow {
+  from { stroke-dashoffset: 22; }
+  to { stroke-dashoffset: 0; }
+}
+
+.wb-dg-drawn .wb-anim-planets {
+  transform-origin: 150px 110px;
+  animation: wb-orbit-slow 60s linear infinite;
+}
+@keyframes wb-orbit-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.wb-dg-drawn .wb-anim-field-lines {
+  transform-origin: 150px 110px;
+  animation: wb-field-pulse 3s ease-in-out infinite;
+}
+@keyframes wb-field-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+.wb-dg-drawn .wb-anim-bulb-glow {
+  transform-origin: 150px 50px;
+  animation: wb-bulb-pulse 2s ease-in-out infinite alternate;
+}
+@keyframes wb-bulb-pulse {
+  0% { opacity: 0.8; filter: drop-shadow(0 0 2px rgba(240, 201, 58, 0.4)); }
+  100% { opacity: 1; filter: drop-shadow(0 0 8px rgba(240, 201, 58, 0.95)); }
+}
+
+/* ---- magnifier button & 2x sketch modal (E4) ---- */
+.wb-zoom-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.8px solid var(--ink, #23211e);
+  background: var(--paper, #fcf8ee);
+  color: var(--ink, #23211e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity .2s ease, transform .15s ease, background-color .15s ease;
+  z-index: 5;
+  padding: 0;
+  box-shadow: 1.5px 1.5px 0 var(--ink, #23211e);
+}
+.wb-zoom-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+.wb-vis:hover .wb-zoom-btn, .wb-zoom-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1.06);
+}
+.wb-zoom-btn:active {
+  transform: scale(0.96);
+}
+
+.wb-zoom-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(35, 33, 30, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  cursor: pointer;
+  overflow: auto;
+}
+.wb-zoom-card {
+  position: relative;
+  background: var(--paper, #fdfaf2);
+  border: 3px solid var(--ink, #23211e);
+  border-radius: 16px;
+  box-shadow: 6px 8px 0 var(--ink, #23211e);
+  max-width: 95vw;
+  max-height: 92vh;
+  overflow: auto;
+  padding: 2.2rem 1.6rem 1.6rem;
+  margin: auto;
+  cursor: pointer;
+}
+.wb-zoom-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--ink, #23211e);
+  background: var(--paper, #fdfaf2);
+  color: var(--ink, #23211e);
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, color .15s ease;
+  z-index: 10;
+  box-shadow: 1px 1px 0 var(--ink, #23211e);
+}
+.wb-zoom-close:hover {
+  background: var(--marker-red, #d9472b);
+  color: #fff;
+  transform: scale(1.1);
+}
+.wb-zoom-stage {
+  user-select: none;
+}

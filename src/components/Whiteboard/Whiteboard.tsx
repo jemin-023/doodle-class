@@ -136,13 +136,14 @@ function BoardLine({ item, animate: animateProp, accent, speed, index, onDone }:
   const hasDecor = item.kind === 'title' || item.kind === 'highlight'
   const isDrawing = item.kind === 'drawing' || isVis
 
-  // per-line human jitter, stable per item
+  // per-line human jitter, stable per item (visuals skip line jitter for crisp alignment)
   const style = useMemo(() => {
+    if (isVis) return undefined
     const rot = ((seed % 1201) / 1000 - 0.6)
     const dy = ((seed >> 3) % 31) / 10 - 1.5
     const dx = ((seed >> 5) % 9) - 2
     return { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)` }
-  }, [seed])
+  }, [seed, isVis])
 
   // text swapped in place (e.g. the lesson was translated): already-written lines show the new text in full
   const prevText = useRef(text)

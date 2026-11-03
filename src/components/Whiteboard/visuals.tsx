@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import katex from 'katex'
 import type { BoardItem } from '../../types'
 import { type RC, RoughSvg, INK, INK_FAINT, HIGHLIGHT, M_BLUE, M_RED, M_GREEN, M_ORANGE, inlineMath } from './shared'
@@ -16,6 +17,79 @@ interface VisProps<K extends BoardItem['kind']> {
   seed: number
   style?: CSSProperties
   onDone?: () => void
+  isZoom?: boolean
+}
+
+function ZoomStage({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    if (ref.current) {
+      const w = ref.current.scrollWidth || ref.current.clientWidth
+      const h = ref.current.scrollHeight || ref.current.clientHeight
+      if (w > 0 && h > 0) setSize({ w, h })
+    }
+  }, [])
+
+  return (
+    <div className="wb-zoom-stage" style={{ position: 'relative', width: size ? size.w * 2 : 'auto', height: size ? size.h * 2 : 'auto', minWidth: 320, minHeight: 200 }}>
+      <div ref={ref} style={{ width: size ? size.w : '100%', position: 'absolute', top: 0, left: 0, transform: 'scale(2)', transformOrigin: 'top left' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+interface VisFrameProps {
+  style?: CSSProperties
+  isZoom?: boolean
+  children: ReactNode
+  zoomContent: ReactNode
+}
+
+function VisFrame({ style, isZoom, children, zoomContent }: VisFrameProps) {
+  const [open, setOpen] = useState(false)
+  const close = useCallback(() => setOpen(false), [])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, close])
+
+  return (
+    <div className="wb-line wb-vis" style={style}>
+      {!isZoom && (
+        <button
+          className="wb-zoom-btn"
+          type="button"
+          onClick={() => setOpen(true)}
+          title="Zoom visual (2×)"
+          aria-label="Zoom visual"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="11" y1="8" x2="11" y2="14" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
+        </button>
+      )}
+      {children}
+      {open && typeof document !== 'undefined' && createPortal(
+        <div className="wb-zoom-modal" onClick={close} role="dialog" aria-modal="true" aria-label="Visual zoom">
+          <div className="wb-zoom-card" onClick={close}>
+            <button className="wb-zoom-close" type="button" onClick={close} aria-label="Close">✕</button>
+            <ZoomStage>
+              {zoomContent}
+            </ZoomStage>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  )
 }
 
 /** drawn flips true when the strokes finish; onDone fires `extra` ms later. A safety timer guarantees onDone. */
@@ -61,7 +135,7 @@ function niceStep(span: number, integerSpan: boolean): number {
   return 10 * mag
 }
 
-export function NumberLine({ item, animate, speed, seed, style, onDone }: VisProps<'numberline'>) {
+export function NumberLine({ item, animate, speed, seed, style, onDone, isZoom }: VisProps<'numberline'>) {
   let from = fin(item.from), to = fin(item.to, 10)
   if (from > to) [from, to] = [to, from]
   if (to - from < 1e-9) to = from + 1
@@ -109,10 +183,10 @@ export function NumberLine({ item, animate, speed, seed, style, onDone }: VisPro
     return out
   }
   return (
-    <div className="wb-line wb-vis" style={style}>
+    <VisFrame style={style} isZoom={isZoom} zoomContent={<NumberLine item={item} animate={false} speed={speed} seed={seed} isZoom />}>
       <div className="wb-nl" style={{ height: H }}><RoughSvg draw={draw} animate={animate} duration={1000 / speed} onDone={svgDone} /></div>
       {item.label && <div className={'wb-vcap' + (drawn ? ' on' : '')}>{inlineMath(String(item.label))}</div>}
-    </div>
+    </VisFrame>
   )
 }
 
@@ -130,7 +204,7 @@ function tex(t: string): ReactNode {
   return <span className="wb-im wb-fraclabel" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
-export function FractionVis({ item, animate, speed, seed, style, onDone }: VisProps<'fraction'>) {
+export function FractionVis({ item, animate, speed, seed, style, onDone, isZoom }: VisProps<'fraction'>) {
   const den = clamp(Math.round(fin(item.den, 2)), 1, 60), num = clamp(Math.round(fin(item.num, 1)), 0, den * 4)
   const pies = Math.max(1, Math.ceil(num / den))
   const bar = den > 12 || pies > 4
@@ -174,10 +248,10 @@ export function FractionVis({ item, animate, speed, seed, style, onDone }: VisPr
   }, [item.label, num, den])
 
   return (
-    <div className="wb-line wb-vis" style={style}>
+    <VisFrame style={style} isZoom={isZoom} zoomContent={<FractionVis item={item} animate={false} speed={speed} seed={seed} isZoom />}>
       <div className="wb-frac" style={{ height: H }}><RoughSvg draw={draw} animate={animate} duration={900 / speed} onDone={svgDone} /></div>
       <div className={'wb-vcap' + (drawn ? ' on' : '')}>{label}</div>
-    </div>
+    </VisFrame>
   )
 }
 
@@ -189,7 +263,7 @@ function niceMax(v: number): number {
   return 10 * mag
 }
 
-export function ChartVis({ item, animate, speed, seed, style, onDone }: VisProps<'chart'>) {
+export function ChartVis({ item, animate, speed, seed, style, onDone, isZoom }: VisProps<'chart'>) {
   const n = Math.min(8, Math.max(0, Math.min(item.labels?.length ?? 0, item.values?.length ?? 0)))
   const labels = (item.labels ?? []).slice(0, n).map(s => String(s))
   const values = (item.values ?? []).slice(0, n).map(v => Math.max(0, fin(v)))
@@ -234,15 +308,15 @@ export function ChartVis({ item, animate, speed, seed, style, onDone }: VisProps
   }
   if (!n) return null
   return (
-    <div className="wb-line wb-vis" style={style}>
+    <VisFrame style={style} isZoom={isZoom} zoomContent={<ChartVis item={item} animate={false} speed={speed} seed={seed} isZoom />}>
       {item.title && <div className="wb-vtitle">{inlineMath(String(item.title))}</div>}
       <div className="wb-chart"><RoughSvg draw={draw} animate={animate} duration={1200 / speed} onDone={svgDone} /></div>
-    </div>
+    </VisFrame>
   )
 }
 
 /* ---------------- table ---------------- */
-export function TableVis({ item, animate, speed, seed, accent, style, onDone }: VisProps<'table'> & { accent: string }) {
+export function TableVis({ item, animate, speed, seed, accent, style, onDone, isZoom }: VisProps<'table'> & { accent: string }) {
   const rows = useMemo(() => {
     const r = (Array.isArray(item.rows) ? item.rows : []).slice(0, 5).map(row => (Array.isArray(row) ? row : [row]).slice(0, 4).map(c => String(c ?? '')))
     const cols = Math.max(1, ...r.map(x => x.length))
@@ -273,7 +347,7 @@ export function TableVis({ item, animate, speed, seed, accent, style, onDone }: 
   }
   if (!nr) return null
   return (
-    <div className="wb-line wb-vis" style={style}>
+    <VisFrame style={style} isZoom={isZoom} zoomContent={<TableVis item={item} animate={false} speed={speed} seed={seed} accent={accent} isZoom />}>
       <div className="wb-tbl" style={{ gridTemplateColumns: `repeat(${nc}, minmax(0, 1fr))` }}>
         <RoughSvg draw={draw} animate={animate} duration={1000 / speed} onDone={svgDone} />
         {rows.map((row, r) => row.map((cell, c) => {
@@ -285,12 +359,12 @@ export function TableVis({ item, animate, speed, seed, accent, style, onDone }: 
           )
         }))}
       </div>
-    </div>
+    </VisFrame>
   )
 }
 
 /* ---------------- diagram ---------------- */
-export function DiagramVis({ item, animate, speed, seed, style, onDone }: VisProps<'diagram'>) {
+export function DiagramVis({ item, animate, speed, seed, style, onDone, isZoom }: VisProps<'diagram'>) {
   const key = diagramKey(item.name)
   const def = key ? DIAGRAM_LIB[key] : null
   const labels = useMemo(() => {
@@ -317,15 +391,15 @@ export function DiagramVis({ item, animate, speed, seed, style, onDone }: VisPro
   }
   if (!def) return null
   return (
-    <div className="wb-line wb-vis" style={style}>
+    <VisFrame style={style} isZoom={isZoom} zoomContent={<DiagramVis item={item} animate={false} speed={speed} seed={seed} isZoom />}>
       {(item.title || def.title) && <div className="wb-vtitle">{inlineMath(String(item.title || def.title))}</div>}
-      <div className="wb-dg">
+      <div className={'wb-dg' + (drawn ? ' wb-dg-drawn' : '')}>
         <RoughSvg draw={draw} animate={animate} duration={1700 / speed} onDone={svgDone} />
         {def.anchors.map((a, i) => labels[i] ? (
           <span key={i} className={'wb-dlab ' + (a.side === 'l' ? 'l' : 'r') + (drawn ? ' on' : '')}
             style={{ top: `${((a.ly ?? a.y) / DH) * 100}%`, transitionDelay: `${i * 110}ms`, color: MARKERS[i % MARKERS.length] }}>{labels[i]}</span>
         ) : null)}
       </div>
-    </div>
+    </VisFrame>
   )
 }

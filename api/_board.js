@@ -35,6 +35,33 @@ export const DIAGRAM_PARTS = {
   'rectangle-area': ['Length', 'Width', 'Area', 'Unit square'],
   volcano: ['Ash cloud', 'Crater', 'Lava', 'Vent', 'Magma chamber'],
   'rupee-coins': ['₹1 coin', '₹2 coin', '₹5 coin', '₹10 note'],
+  // 20 new diagrams (E1)
+  eye: ['Cornea', 'Iris', 'Pupil', 'Lens', 'Retina'],
+  ear: ['Outer ear', 'Ear canal', 'Ear drum', 'Cochlea'],
+  'flower-parts': ['Petal', 'Stigma', 'Anther', 'Ovary', 'Sepal'],
+  seed: ['Seed coat', 'Cotyledon', 'Embryo', 'Radicle'],
+  insect: ['Head', 'Thorax', 'Abdomen', 'Antenna', 'Legs'],
+  'human-skeleton': ['Skull', 'Rib cage', 'Spine', 'Pelvis', 'Femur'],
+  'nervous-system': ['Brain', 'Spinal cord', 'Nerves'],
+  lungs: ['Trachea', 'Bronchus', 'Right lung', 'Left lung', 'Diaphragm'],
+  kidney: ['Kidney', 'Renal artery', 'Ureter', 'Bladder'],
+  'leaf-structure': ['Cuticle', 'Epidermis', 'Palisade layer', 'Spongy layer', 'Stoma'],
+  'convex-lens': ['Principal axis', 'Focus', 'Optical centre', 'Convex lens'],
+  'concave-mirror': ['Reflecting surface', 'Pole', 'Focus', 'Centre of curvature'],
+  pulley: ['Fixed support', 'Wheel', 'Rope', 'Load', 'Effort'],
+  'inclined-plane': ['Slope', 'Height', 'Base', 'Load'],
+  'food-pyramid': ['Fats and oils', 'Proteins', 'Vitamins', 'Carbohydrates'],
+  'rain-gauge': ['Funnel', 'Outer cylinder', 'Measuring tube', 'Scale'],
+  compass: ['Compass needle', 'North mark', 'Dial', 'Casing'],
+  'map-directions': ['North', 'East', 'South', 'West'],
+  'number-place-value': ['Thousands', 'Hundreds', 'Tens', 'Ones'],
+  'analog-thermometer-scale': ['Boiling point', 'Freezing point', 'Body temp', 'Mercury thread'],
+  // 5 geometry diagrams (E2)
+  'protractor-angle': ['Baseline', 'Origin', 'Angle arc', 'Reading'],
+  'coordinate-grid': ['X axis', 'Y axis', 'Origin', 'Point (x, y)'],
+  'polygon-hexagon': ['Side', 'Vertex', 'Interior angle', 'Diagonal'],
+  'parallel-lines-transversal': ['Parallel lines', 'Transversal', 'Alternate angles', 'Corresponding angles'],
+  'circle-chord-tangent': ['Centre', 'Chord', 'Tangent', 'Secant', 'Point of contact'],
 }
 export const DIAGRAMS = Object.keys(DIAGRAM_PARTS)
 const diagramKey = n => { const k = String(n || '').toLowerCase().trim().replace(/[\s_]+/g, '-'); return DIAGRAM_PARTS[k] ? k : null }
