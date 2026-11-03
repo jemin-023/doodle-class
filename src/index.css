@@ -63,3 +63,22 @@ h1 { animation: dc-pop-in .6s cubic-bezier(.2,.9,.3,1.2) both; }
 @media (prefers-reduced-motion: reduce) {
   #root main, #root section, .ui-card, .ui-card:hover, .ui-btn:hover, .ui-chip:hover, h1 { animation: none !important; }
 }
+
+/* ---- A touch of India: marigold toran + saffron/peacock accents ---- */
+:root { --saffron: #e8892b; --marigold: #f2a516; --peacock: #1f6f78; }
+body::before {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 18px; z-index: 50; pointer-events: none;
+  background-repeat: repeat-x; background-size: 44px 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='18'%3E%3Cpath d='M0 2 Q22 9 44 2' stroke='%2323211e' stroke-width='1.2' fill='none'/%3E%3Ccircle cx='22' cy='9' r='5' fill='%23f2a516' stroke='%23c96d0f' stroke-width='1.2'/%3E%3Ccircle cx='22' cy='9' r='1.6' fill='%23c96d0f'/%3E%3Cpath d='M8 5 q3 7 6 1z M30 6 q3 6 6 -1z' fill='%232f8a4c'/%3E%3C/svg%3E");
+}
+#root { padding-top: 14px; }
+.dc-sarvam {
+  position: fixed; right: 12px; bottom: 12px; z-index: 40; display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; background: var(--board); color: var(--ink); text-decoration: none;
+  border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  font-family: var(--font-hand); font-size: 1.15rem; box-shadow: 2px 2px 0 var(--saffron); transform: rotate(-1.5deg);
+}
+.dc-sarvam b { color: var(--saffron); font-weight: 700; }
+.dc-sarvam:hover { transform: rotate(0) translateY(-2px); }
+.dc-sarvam svg { flex: none; }
+@media (max-width: 520px) { .dc-sarvam { font-size: 1rem; right: 8px; bottom: 8px; padding: 4px 10px; } }
