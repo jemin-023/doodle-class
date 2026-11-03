@@ -1,5 +1,5 @@
 import { localizeStep } from './_localize.js'
-import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS , cleanLang, cleanGrade, cleanTopic, rejectNonPost, fixLatexEscapes, BOARD_ITEM_SHAPES } from './_sarvam.js'
+import { chatStream, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, CHAR_SUBJECTS , cleanLang, cleanGrade, cleanTopic, rejectNonPost, fixLatexEscapes, BOARD_ITEM_SHAPES, boardLangOf, boardRule } from './_sarvam.js'
 import { cacheGet, cachePut, inLanguage } from './_cache.js'
 import { translateLesson } from './_translate.js'
 import { checkSafe } from './_safety.js'
@@ -18,6 +18,7 @@ export default async function handler(req, res) {
     topic: cleanTopic(body.topic),
     characterId: body.characterId || 'bolt',
     language: cleanLang(body.language),
+    boardLanguage: boardLangOf(body, cleanLang(body.language)),
     grade: cleanGrade(body.grade),
   }
   const source = String(body.source || '').replace(/\s+\n/g, '\n').trim().slice(0, 6000)
@@ -47,14 +48,14 @@ export default async function handler(req, res) {
       let s = sanitizeStep(o)
       if (!s) return
       // the model occasionally answers in English despite the prompt: translate that step before sending it
-      if (request.language !== 'en-IN' && !inLanguage([s.say], request.language)) {
+      if (request.language !== 'en-IN' && !inLanguage([s.say], request.language, request.boardLanguage === request.language ? 0.5 : 0.3)) {
         try {
-          const tr = (await translateLesson({ steps: [s] }, request.language)).steps?.[0]
+          const tr = (await translateLesson({ steps: [s] }, request.language, { board: request.boardLanguage === request.language })).steps?.[0]
           const fixed = tr && sanitizeStep(tr)
           if (fixed) { s = fixed; console.log('[lesson-stream] step re-translated to', request.language) }
         } catch (e) { console.error('[lesson-stream] re-translate failed:', e.message || e) }
       }
-      await localizeStep(s, request.language)
+      await localizeStep(s, request.boardLanguage)
       if (!metaSent) { metaSent = true; realMeta = { topic: request.topic, subject: CHAR_SUBJECTS[request.characterId] || 'General' }; send({ type: 'meta', ...realMeta }) }
       steps++
       if (steps === 1) firstMs = Date.now() - t0
@@ -92,7 +93,7 @@ ${source}
 Teach exactly this passage: explain its key ideas step by step in ${lang}, for a grade ${request.grade} student. Use "${request.topic}" as the topic title. Do NOT invent facts beyond the passage; you may add only very simple everyday examples. If the passage is not in ${lang}, translate its ideas into ${lang}.
 ` : `Teach the topic "${request.topic}" to a grade ${request.grade} student.
 `
-    const user = `${grounding}Write all "say" text in ${lang} (script of that language). Board text may be short ${lang} too; keep maths symbols as-is.
+    const user = `${grounding}Write all "say" text in ${lang} (script of that language). ${boardRule(request.language, request.boardLanguage)}
 Output exactly these lines, each a single-line JSON object:
 Line 1: {"type":"meta","topic":string,"subject":"${subject}" or better fitting subject}
 Then 4 to 6 lines: {"type":"step","say":string,"board":[item,...]}
@@ -128,7 +129,7 @@ REMEMBER: every "say" must be in ${lang}${request.language === 'en-IN' ? '' : ' 
       }
     }
     if (!steps) throw new Error('no steps parsed')
-    if (!source && kept.length >= 3 && inLanguage(kept.map(s => s.say), request.language)) await cachePut('lesson', request, { topic: realMeta?.topic || request.topic, subject: realMeta?.subject || 'General', steps: kept })
+    if (!source && kept.length >= 3 && inLanguage(kept.map(s => s.say), request.language, request.boardLanguage === request.language ? 0.5 : 0.3)) await cachePut('lesson', request, { topic: realMeta?.topic || request.topic, subject: realMeta?.subject || 'General', steps: kept })
   } catch (e) {
     if (blocked) {
       send({ type: 'meta', topic: request.topic, subject: 'General', blocked: true })

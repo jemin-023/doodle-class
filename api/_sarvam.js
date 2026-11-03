@@ -11,6 +11,14 @@ export function parseBody(req) {
 
 const LANGS = ['en-IN', 'hi-IN', 'ta-IN', 'te-IN', 'kn-IN', 'mr-IN', 'bn-IN', 'gu-IN', 'ml-IN', 'od-IN', 'pa-IN']
 export function cleanLang(l) { return LANGS.includes(l) ? l : 'en-IN' }
+/** Board (written) language: English-medium kids often listen in Hindi but write in English. Defaults to the spoken language. */
+export function boardLangOf(body, language) { const b = body?.boardLanguage; return LANGS.includes(b) ? b : language }
+/** Prompt rule for board text, given the spoken and the written language. */
+export function boardRule(language, boardLanguage) {
+  const say = LANG_NAMES[language] || 'English', board = LANG_NAMES[boardLanguage] || say
+  if (language === boardLanguage) return `Board text may be short ${say} too; keep maths symbols as-is.`
+  return `ALL board text (titles, bullets, highlights, examples, labels, table cells, chart labels) must be in ${board}, exactly as in an ${board}-medium textbook or notebook; keep maths symbols as-is. The "say" narration is spoken in ${say}, but it uses the same ${board} technical terms written on the board (e.g. "photosynthesis", "denominator", "reactants") naturally inside ${say} sentences, the way Indian ${board}-medium teachers explain.`
+}
 export function cleanGrade(g) { const n = Math.round(Number(g)); return n >= 1 && n <= 10 ? n : 5 }
 export function cleanTopic(t, def = 'Photosynthesis') { return String(t || def).replace(/\s+/g, ' ').trim().slice(0, 120) || def }
 /** Returns true (and sends 405) when the request is not POST. */

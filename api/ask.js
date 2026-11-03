@@ -1,5 +1,5 @@
 import { localizeStep } from './_localize.js'
-import { chat, extractJSON, parseBody, sanitizeStep, LANG_NAMES, PERSONA, CHAR_NAMES , cleanLang, cleanGrade, rejectNonPost, BOARD_ITEM_SHAPES } from './_sarvam.js'
+import { chat, extractJSON, parseBody, sanitizeStep, LANG_NAMES, PERSONA, CHAR_NAMES , cleanLang, cleanGrade, rejectNonPost, BOARD_ITEM_SHAPES, boardLangOf, boardRule } from './_sarvam.js'
 import { checkSafe } from './_safety.js'
 
 export default async function handler(req, res) {
@@ -8,6 +8,7 @@ export default async function handler(req, res) {
   const question = String(b.question || '').slice(0, 300)
   try {
     const language = cleanLang(b.language)
+    const boardLanguage = boardLangOf(b, language)
     // free-text doubt: always run the LLM check too, in parallel with the answer
     const verdict = checkSafe(question, language, { llm: true })
     const early = await Promise.race([verdict, new Promise(r => setTimeout(() => r(null), 5))])
@@ -25,14 +26,14 @@ export default async function handler(req, res) {
 The student asks: "${question}"${focusNote}
 Answer in ${lang}, in character, 2-3 SHORT sentences a grade ${grade} child understands.
 JSON: {"say": string, "board": [item, ...]} with 1-4 short board items related to the lesson.
-In board text wrap 1-2 key words in **double asterisks**.
+In board text wrap 1-2 key words in **double asterisks**. ${boardRule(language, boardLanguage)}
 In JSON, "equation" items must be LaTeX with NO $ wrappers, steps separated by \\\\ ; inline maths in other items goes in $...$. Double every backslash in the JSON output.
 ${BOARD_ITEM_SHAPES}`
     const [out, v] = await Promise.all([chat([{ role: 'system', content: sys }, { role: 'user', content: user }], { temperature: 0.5, max_tokens: 400 }), verdict])
     if (v.ok === false) return res.status(200).json(kind(v))
     const step = sanitizeStep(extractJSON(out))
     if (!step) throw new Error('bad step')
-    return res.status(200).json(await localizeStep(step, language))
+    return res.status(200).json(await localizeStep(step, boardLanguage))
   } catch (e) {
     console.error('[ask] fallback:', e.message || e)
     return res.status(200).json({ say: "Good question! Let's look at it again together, step by step.", board: [{ kind: 'highlight', text: question.slice(0, 60) || 'Good question!' }] })

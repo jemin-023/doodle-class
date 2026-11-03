@@ -8,6 +8,8 @@ export interface LangSwitchProps {
   lesson: Lesson
   current: LanguageCode
   disabled?: boolean          // true while the lesson is still streaming
+  /** The board stays in this language (English-medium mode): only the narration is translated. */
+  boardLanguage?: LanguageCode
   /** Called with the whole lesson translated into `code`; Learn swaps it in and replays the current step. */
   onSwitch: (translated: Lesson, code: LanguageCode) => void
 }
@@ -16,7 +18,7 @@ export interface LangSwitchProps {
 const cache = new Map<string, Map<LanguageCode, Lesson>>()
 const family = (l: Lesson) => `${l.topic}|${l.characterId}|${l.steps.length}`
 
-export default function LangSwitch({ lesson, current, disabled, onSwitch }: LangSwitchProps) {
+export default function LangSwitch({ lesson, current, disabled, onSwitch, boardLanguage }: LangSwitchProps) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<LanguageCode | null>(null)
   const [err, setErr] = useState('')
@@ -60,7 +62,7 @@ export default function LangSwitch({ lesson, current, disabled, onSwitch }: Lang
     try {
       const r = await fetch('/api/v2/translate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lesson, target: code }), signal: AbortSignal.timeout(25000),
+        body: JSON.stringify({ lesson, target: code, ...(boardLanguage ? { sayOnly: true } : {}) }), signal: AbortSignal.timeout(25000),
       })
       const j = await r.json().catch(() => null)
       if (!r.ok || !j?.lesson?.steps?.length || j.untranslated) throw new Error('fail')

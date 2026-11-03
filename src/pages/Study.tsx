@@ -9,6 +9,7 @@ import { CharacterAvatar } from '../components/Characters/Character'
 import { DoodleScatter } from '../components/Doodles/Doodles'
 import './pages.css'
 import './study.css'
+import BoardLangToggle, { boardParam, useEnglishBoard } from '../components/BoardLang/BoardLang'
 
 // Dev fixture: used only while the real catalog has no classes.
 const FIXTURE: NcertCatalog = {
@@ -51,6 +52,7 @@ export default function Study() {
   const chapterFile = sp.get('chapter') || ''
   const [charPick, setCharPick] = useState<string | null>(null)
   const [lang, setLang] = useState<LanguageCode>(prefs.l)
+  const [englishBoard, setEnglishBoard] = useEnglishBoard()
 
   const cls = CATALOG.classes.find(c => c.grade === grade)
   const subject: CatalogSubject | undefined = cls?.subjects.find(s => s.id === subjectId)
@@ -68,9 +70,10 @@ export default function Study() {
   const go = (secId: string | null, title: string) => {
     if (!chapter) return
     try { localStorage.setItem(KEY, JSON.stringify({ c: cid, l: lang, g: grade })) } catch { /* ignore */ }
-    const q = `lang=${lang}&grade=${grade}&ncert=${chapter.file}${secId ? `&sec=${encodeURIComponent(secId)}` : ''}`
-    if (test) nav(`/quiz?topic=${encodeURIComponent(title)}&character=${cid}&${q}`)
-    else nav(`/learn/${cid}?${q}&topic=${encodeURIComponent(title)}`)
+    const ref = `&grade=${grade}&ncert=${chapter.file}${secId ? `&sec=${encodeURIComponent(secId)}` : ''}`
+    // English-medium: the quiz is written, so it follows the board language
+    if (test) nav(`/quiz?topic=${encodeURIComponent(title)}&character=${cid}&lang=${boardParam(lang, englishBoard) ? 'en-IN' : lang}${ref}`)
+    else nav(`/learn/${cid}?lang=${lang}${boardParam(lang, englishBoard)}${ref}&topic=${encodeURIComponent(title)}`)
   }
   const other = () => nav(`/?other=1&topic=${encodeURIComponent(chapter?.title ?? '')}&grade=${grade}#learn-anything`)
 
@@ -201,6 +204,7 @@ export default function Study() {
                   {LANGUAGES.map(l => <Chip key={l.code} selected={l.code === lang} onClick={() => setLang(l.code)}>{l.label}</Chip>)}
                 </div>
               </div>
+              {!test && <BoardLangToggle lang={lang} on={englishBoard} onChange={setEnglishBoard} />}
               <p className="pg-note st-hint">{CHARACTERS.find(c => c.id === cid)?.name} will {test ? 'ask you questions' : 'teach you'} from this part of the book.</p>
             </section>
           </>

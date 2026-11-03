@@ -14,6 +14,7 @@ export interface TeachBackProps {
   characterId: string
   language: LanguageCode
   grade: number
+  boardLanguage?: LanguageCode
   /** Insert a correction step after the current one; Learn plays it on the board. */
   onCorrection: (step: LessonStep) => void
 }
@@ -39,7 +40,7 @@ function Star({ on }: { on: boolean }) {
   )
 }
 
-export default function TeachBack({ lesson, characterId, language, grade, onCorrection }: TeachBackProps) {
+export default function TeachBack({ lesson, characterId, language, grade, onCorrection, boardLanguage }: TeachBackProps) {
   const ch = getCharacter(characterId)
   const [phase, setPhase] = useState<Phase>('invite')
   const [text, setText] = useState('')
@@ -68,7 +69,7 @@ export default function TeachBack({ lesson, characterId, language, grade, onCorr
     try {
       const r = await fetch('/api/v2/teachback', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lesson: { topic: lesson.topic, steps: lesson.steps }, explanation, characterId, language, grade }),
+        body: JSON.stringify({ lesson: { topic: lesson.topic, steps: lesson.steps }, explanation, characterId, language, grade, ...(boardLanguage ? { boardLanguage } : {}) }),
       })
       if (!r.ok) throw new Error(String(r.status))
       const j = await r.json()

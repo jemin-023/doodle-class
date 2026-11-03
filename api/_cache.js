@@ -7,8 +7,9 @@ export const PROMPT_VERSION = 'v8'
 export const TTL = 30 * 24 * 3600
 const normTopic = t => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
-export function cacheKey(kind, { topic, characterId, language, grade }) {
-  const raw = [kind, normTopic(topic), characterId || '', language || '', grade || '', PROMPT_VERSION].join('|')
+export function cacheKey(kind, { topic, characterId, language, grade, boardLanguage }) {
+  const lang = (language || '') + (boardLanguage && boardLanguage !== language ? '>' + boardLanguage : '')
+  const raw = [kind, normTopic(topic), characterId || '', lang, grade || '', PROMPT_VERSION].join('|')
   return 'dc:' + kind + ':' + createHash('sha1').update(raw).digest('hex').slice(0, 24)
 }
 export async function cacheGet(kind, req) {
@@ -21,11 +22,11 @@ export async function cachePut(kind, req, value) {
 // Unicode block per language; used to refuse caching a lesson the model wrote in the wrong language.
 const SCRIPT = { 'hi-IN': /[ऀ-ॿ]/g, 'mr-IN': /[ऀ-ॿ]/g, 'bn-IN': /[ঀ-৿]/g, 'pa-IN': /[਀-੿]/g, 'gu-IN': /[઀-૿]/g, 'od-IN': /[଀-୿]/g, 'ta-IN': /[஀-௿]/g, 'te-IN': /[ఀ-౿]/g, 'kn-IN': /[ಀ-೿]/g, 'ml-IN': /[ഀ-ൿ]/g }
 /** True when the spoken text is mostly in the requested language's script (always true for English). */
-export function inLanguage(texts, language) {
+export function inLanguage(texts, language, min = 0.5) {
   const re = SCRIPT[language]
   if (!re) return true
   const s = texts.join(' ')
   const letters = (s.match(/\p{L}/gu) || []).length
   if (!letters) return false
-  return (s.match(re) || []).length / letters >= 0.5
+  return (s.match(re) || []).length / letters >= min
 }

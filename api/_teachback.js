@@ -1,5 +1,5 @@
 // POST /api/v2/teachback: the kid explains a lesson back; teacher scores it and draws a correction.
-import { chat, extractJSON, parseBody, sanitizeStep, LANG_NAMES, PERSONA, CHAR_NAMES, cleanLang, cleanGrade, rejectNonPost, hasKey, BOARD_ITEM_SHAPES } from './_sarvam.js'
+import { chat, extractJSON, parseBody, sanitizeStep, LANG_NAMES, PERSONA, CHAR_NAMES, cleanLang, cleanGrade, rejectNonPost, hasKey, BOARD_ITEM_SHAPES, boardLangOf, boardRule } from './_sarvam.js'
 
 const plain = t => String(t || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()
 const boardText = s => (Array.isArray(s?.board) ? s.board : []).map(b => b?.text || b?.label || '').filter(Boolean).map(plain).join('; ')
@@ -41,6 +41,8 @@ export default async function handler(req, res) {
   const name = CHAR_NAMES[id]
   const language = cleanLang(b.language)
   const lang = LANG_NAMES[language]
+  const boardLanguage = boardLangOf(b, language)
+  const bl = LANG_NAMES[boardLanguage]
   const grade = cleanGrade(b.grade)
   const topic = plain(lesson.topic).slice(0, 120) || 'this lesson'
 
@@ -60,10 +62,10 @@ Judge how well the child understood the lesson.
 score: 0 = off-topic, empty or nothing correct; 1 = a few correct bits, big gaps; 2 = mostly right, small gap; 3 = clear and correct.
 JSON: {"score":0-3,"understood":[up to 3 short concept phrases the child got right],"missing":[up to 3 short concept phrases missed or wrong],"misconception":string (ONLY if the child said something wrong, one short sentence; else omit),"say":string,"correction":{"say":string,"board":[...]} (ONLY if there is a misconception or a key gap; else omit)}
 Rules:
-- understood/missing/misconception/say/correction: write in ${lang} using its own native script, even if the child answered in Roman script or Hinglish.
+- say and correction.say: write in ${lang} using its own native script, even if the child answered in Roman script or Hinglish. understood/missing/misconception and the correction's board text are WRITTEN on screen: use ${bl}${boardLanguage !== language ? ` (the child studies in ${bl} medium; use ${bl} textbook terms)` : ''}.
 - If score is 0 because the answer is off-topic or too short, omit misconception and correction.
 - "say": in ${lang}, in your character's voice, 2-3 SHORT sentences a grade ${grade} child understands. Praise something specific the child actually said, gently name any mistake without blame, end encouraging. If the answer is off-topic or too short, score 0 and kindly nudge them to try again about "${topic}".
-- "correction": a lesson step in ${lang} that explains the right idea simply (say: 1-2 short sentences; board: 2-4 items). The FIRST board item must be {"kind":"title","text":"Let's fix this"} (translated to ${lang}). Wrap 1-2 key words in **double asterisks** in board text. Use a drawing item (arrow/circle) when it helps.
+- "correction": a lesson step (say in ${lang}, board in ${bl}) that explains the right idea simply (say: 1-2 short sentences; board: 2-4 items). The FIRST board item must be {"kind":"title","text":"Let's fix this"} (in ${bl}). Wrap 1-2 key words in **double asterisks** in board text. Use a drawing item (arrow/circle) when it helps.
 - In JSON, double every backslash. Equations are LaTeX with no $ wrappers.
 ${BOARD_ITEM_SHAPES}`
     const out = await chat([{ role: 'system', content: sys }, { role: 'user', content: user }], { temperature: 0.4, max_tokens: 900 })

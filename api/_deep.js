@@ -2,7 +2,7 @@
 // POST {ncert:{file,sec?}, characterId, language, grade, from?} -> NDJSON: meta (with outline), step* (with covers), done {next?}
 import fs from 'node:fs'
 import { localizeStep } from './_localize.js'
-import { chat, chatStream, extractJSON, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, cleanLang, cleanGrade, rejectNonPost, fixLatexEscapes, BOARD_ITEM_SHAPES } from './_sarvam.js'
+import { chat, chatStream, extractJSON, parseBody, sanitizeStep, hasKey, LANG_NAMES, PERSONA, CHAR_NAMES, cleanLang, cleanGrade, rejectNonPost, fixLatexEscapes, BOARD_ITEM_SHAPES, boardLangOf, boardRule } from './_sarvam.js'
 import { cacheGet, cachePut, inLanguage } from './_cache.js'
 import { translateLesson } from './_translate.js'
 
@@ -107,8 +107,8 @@ ${src}
   return items.map((i, k) => ({ id: k, kind: i.kind, text: i.text, pos: i.pos, ...(i.ex !== undefined ? { ex: i.ex } : {}) }))
 }
 
-const planKey = (rq, sec) => ({ topic: `${rq.file}|${sec || '*'}|plan|${DEEP_V}`, characterId: 'plan', language: rq.language, grade: 0 })
-const batchKey = (rq, sec, start, n) => ({ topic: `${rq.file}|${sec || '*'}|b${start}|${n}|${DEEP_V}`, characterId: rq.characterId, language: rq.language, grade: rq.grade })
+const planKey = (rq, sec) => ({ topic: `${rq.file}|${sec || '*'}|plan|${DEEP_V}`, characterId: 'plan', language: rq.boardLanguage, grade: 0 })
+const batchKey = (rq, sec, start, n) => ({ topic: `${rq.file}|${sec || '*'}|b${start}|${n}|${DEEP_V}`, characterId: rq.characterId, language: rq.language, boardLanguage: rq.boardLanguage, grade: rq.grade })
 
 /** items per batch: 2 when an example is among the next 3, else 3 */
 function batchEnd(outline, start) {
@@ -147,6 +147,7 @@ Rules:
 - For an "example": FIRST step writes the problem on the board ("example" item with the given data), then solve it STEP BY STEP exactly like the book's solution, one line of working per step as "equation" items (valid LaTeX, no $ wrappers; for chemistry use \\text{} / \\ce-free plain LaTeX like 2H_2 + O_2 \\rightarrow 2H_2O), explaining each line in "say". The LAST step of the example puts the final answer in a "highlight".
 - Do NOT greet, say goodbye, thank the class, or recap at the end: more lessons follow right after. Only the very first step of the whole lesson may greet.
 - "covers" lists the outline ids this step teaches (only ids listed above). Every id must be in the covers of at least one step; an example's ids belong to its steps.
+- ${boardRule(rq.language, rq.boardLanguage)}
 - In board text (not title/equation), wrap 1-2 key words in **double asterisks**. Inline maths in non-equation items goes inside $...$. JSON escaping: backslashes doubled. Never put a newline inside a JSON object. Do not add a title step unless the first item starts a new topic.
 REMEMBER: every "say" must be in ${lang}${rq.language === 'en-IN' ? '' : ' (not English)'}.`
   return [{ role: 'system', content: sys }, { role: 'user', content: user }]
@@ -163,15 +164,15 @@ function parseStepLine(line) {
   return s
 }
 
-async function fixLanguage(s, language) {
-  if (language !== 'en-IN' && !inLanguage([s.say], language)) {
+async function fixLanguage(s, language, boardLanguage = language) {
+  if (language !== 'en-IN' && !inLanguage([s.say], language, boardLanguage === language ? 0.5 : 0.3)) {
     try {
-      const tr = (await translateLesson({ steps: [s] }, language)).steps?.[0]
+      const tr = (await translateLesson({ steps: [s] }, language, { board: boardLanguage === language })).steps?.[0]
       const fixed = tr && sanitizeStep(tr)
       if (fixed) s = { ...fixed, covers: s.covers }
     } catch (e) { console.error('[deep] re-translate failed:', e.message || e) }
   }
-  await localizeStep(s, language)
+  await localizeStep(s, boardLanguage)
   return s
 }
 
@@ -186,7 +187,7 @@ async function runBatch(rq, part, outline, start, end, lang, emit) {
     let cv = s.covers.filter(c => ids.has(c))
     if (!cv.length) { const nx = [...ids].find(i => !covered.has(i)); cv = [nx ?? [...ids].pop()] }
     s.covers = cv
-    s = await fixLanguage(s, rq.language)
+    s = await fixLanguage(s, rq.language, rq.boardLanguage)
     cv.forEach(c => covered.add(c))
     steps.push(s); await emit(s)
   }
@@ -207,7 +208,7 @@ async function runBatch(rq, part, outline, start, end, lang, emit) {
   const left = [...ids].filter(i => !covered.has(i))
   for (const id of left) {
     const it = outline[id]
-    const s = await fixLanguage({ say: it.text, board: [{ kind: 'highlight', text: clip(it.text, 110) }], covers: [id] }, rq.language)
+    const s = await fixLanguage({ say: it.text, board: [{ kind: 'highlight', text: clip(it.text, 110) }], covers: [id] }, rq.language, rq.boardLanguage)
     steps.push(s); await emit(s)
   }
   return steps
@@ -217,7 +218,7 @@ async function fallbackStep(rq, part, outline, start, end) {
   const items = outline.slice(start, end)
   const text = clip(part.text.slice(Math.max(0, items[0].pos - 100), items[0].pos + 400), 300)
   let s = { say: `Let's read this part together. ${items.map(i => i.text).join('. ')}.`, board: [{ kind: 'title', text: clip(items[0].text, 60) }, { kind: 'text', text: clip(text, 110) }], covers: items.map(i => i.id) }
-  try { s = await fixLanguage(s, rq.language) } catch { /* keep English */ }
+  try { s = await fixLanguage(s, rq.language, rq.boardLanguage) } catch { /* keep English */ }
   return s
 }
 
@@ -229,6 +230,7 @@ export default async function handler(req, res) {
     sec: body?.ncert?.sec ? String(body.ncert.sec).slice(0, 24) : undefined,
     characterId: body.characterId || 'bolt', language: cleanLang(body.language), grade: cleanGrade(body.grade),
   }
+  rq.boardLanguage = boardLangOf(body, rq.language)
   const from = Math.max(0, Math.floor(Number(body.from) || 0))
   const t0 = Date.now()
   res.statusCode = 200
@@ -251,9 +253,10 @@ export default async function handler(req, res) {
     if (!outline) {
       if (!hasKey()) throw new Error('no key')
       const tp = Date.now()
-      try { outline = await plan(part, lang, rq.language) } catch (e) { console.warn('[deep] plan retry:', e.message || e); outline = await plan(part, lang, rq.language) }
-      if (!inLanguage(outline.map(i => i.text), rq.language)) {
-        try { const tr = await translateLesson({ steps: outline.map(i => ({ say: i.text, board: [{ kind: 'text', text: i.text }] })) }, rq.language); outline = outline.map((i, k) => ({ ...i, text: clip(tr.steps?.[k]?.say || i.text, 140) })) } catch { /* keep */ }
+      const bl = LANG_NAMES[rq.boardLanguage] || lang
+      try { outline = await plan(part, bl, rq.boardLanguage) } catch (e) { console.warn('[deep] plan retry:', e.message || e); outline = await plan(part, bl, rq.boardLanguage) }
+      if (!inLanguage(outline.map(i => i.text), rq.boardLanguage)) {
+        try { const tr = await translateLesson({ steps: outline.map(i => ({ say: i.text, board: [{ kind: 'text', text: i.text }] })) }, rq.boardLanguage); outline = outline.map((i, k) => ({ ...i, text: clip(tr.steps?.[k]?.say || i.text, 140) })) } catch { /* keep */ }
       }
       await cachePut('deep', planKey(rq, rq.sec), { items: outline })
       log.planMs = Date.now() - tp
@@ -283,7 +286,7 @@ export default async function handler(req, res) {
       idx = end
     }
     if (next === undefined) {
-      const recap = await fixLanguage({ say: `That was ${part.topic}. Let's remember the big ideas together!`, board: [...(rq.language === 'en-IN' ? [{ kind: 'title', text: clip(part.topic, 60) }] : []), ...outline.filter(i => i.kind === 'point').slice(0, 3).map(i => ({ kind: 'bullet', text: clip(i.text, 80) }))], covers: [] }, rq.language).catch(() => null)
+      const recap = await fixLanguage({ say: `That was ${part.topic}. Let's remember the big ideas together!`, board: [...(rq.boardLanguage === 'en-IN' ? [{ kind: 'title', text: clip(part.topic, 60) }] : []), ...outline.filter(i => i.kind === 'point').slice(0, 3).map(i => ({ kind: 'bullet', text: clip(i.text, 80) }))], covers: [] }, rq.language, rq.boardLanguage).catch(() => null)
       if (recap) await emitStep(recap)
     }
     console.log(`[deep] ${rq.file}/${rq.sec || '*'} ${rq.language} from=${from} items=${outline.length} steps=${log.steps} first=${log.firstMs}ms plan=${log.planMs ?? 'cached'} batches=[${log.batches.join(' ')}] total=${Date.now() - t0}ms next=${next ?? 'end'}`)

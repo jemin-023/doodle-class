@@ -1,5 +1,5 @@
 import { localizeStep } from './_localize.js'
-import { chat, extractJSON, parseBody , cleanLang, cleanGrade, cleanTopic, rejectNonPost, BOARD_ITEM_SHAPES, sanitizeStep, LANG_NAMES, PERSONA } from './_sarvam.js'
+import { chat, extractJSON, parseBody , cleanLang, cleanGrade, cleanTopic, rejectNonPost, BOARD_ITEM_SHAPES, sanitizeStep, LANG_NAMES, PERSONA, boardLangOf, boardRule } from './_sarvam.js'
 import { cacheGet, cachePut, inLanguage } from './_cache.js'
 import { checkSafe } from './_safety.js'
 import { SAMPLE_LESSONS } from './_samples.js'
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     topic: cleanTopic(body.topic),
     characterId: body.characterId || 'bolt',
     language: cleanLang(body.language),
+    boardLanguage: boardLangOf(body, cleanLang(body.language)),
     grade: cleanGrade(body.grade),
   }
   const source = String(body.source || '').replace(/\s+\n/g, '\n').trim().slice(0, 6000)
@@ -55,7 +56,7 @@ ${source}
 Teach exactly this passage: explain its key ideas step by step in ${lang}, for a grade ${request.grade} student. Use "${request.topic}" as the topic title. Do NOT invent facts beyond the passage; you may add only very simple everyday examples. If the passage is not in ${lang}, translate its ideas into ${lang}.
 ` : `Teach the topic "${request.topic}" to a grade ${request.grade} student.
 `
-    const user = `${grounding}Write all "say" text in ${lang} (script of that language). Board text may be short ${lang} too; keep maths symbols as-is.
+    const user = `${grounding}Write all "say" text in ${lang} (script of that language). ${boardRule(request.language, request.boardLanguage)}
 JSON shape:
 {"topic": string, "subject": "${ch.subject}" or better fitting subject, "steps": [ {"say": string, "board": [ item, ... ]} ]}
 Rules:
@@ -70,8 +71,8 @@ Rules:
     const [out, v] = await Promise.all([genP, verdict])
     if (v.ok === false) return res.status(200).json(safeLesson(request, v.reply))
     const lesson = sanitize(extractJSON(out), request)
-    for (const st of lesson.steps) await localizeStep(st, request.language)
-    if (!source && inLanguage(lesson.steps.map(s => s.say), request.language)) await cachePut('lesson', request, { topic: lesson.topic, subject: lesson.subject, steps: lesson.steps })
+    for (const st of lesson.steps) await localizeStep(st, request.boardLanguage)
+    if (!source && inLanguage(lesson.steps.map(s => s.say), request.language, request.boardLanguage === request.language ? 0.5 : 0.3)) await cachePut('lesson', request, { topic: lesson.topic, subject: lesson.subject, steps: lesson.steps })
     console.log(`[lesson] generated ${request.topic} ${Date.now() - t0}ms`)
     return res.status(200).json(lesson)
   } catch (e) {

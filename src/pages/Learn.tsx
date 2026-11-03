@@ -34,6 +34,10 @@ export default function Learn() {
   const urlLang = (LANGUAGES.some(l => l.code === rawLang) ? rawLang : 'en-IN') as LanguageCode
   const [langOverride, setLangOverride] = useState<LanguageCode | null>(null)
   const lang = langOverride ?? urlLang
+  // English-medium mode: listen in e.g. Hindi, but the board (and quiz) stay in the written language
+  const rawBoard = sp.get('board')
+  const boardLang = (rawBoard && LANGUAGES.some(l => l.code === rawBoard) ? rawBoard : null) as LanguageCode | null
+  const boardOpt = boardLang && boardLang !== urlLang ? { boardLanguage: boardLang } : {}
   const grade = Number(sp.get('grade')) || 5
   const ncertFile = sp.get('ncert') || ''
   const ncertSec = sp.get('sec') || ''
@@ -84,9 +88,9 @@ export default function Learn() {
         }))
       },
     }
-    const short = () => streamLesson({ topic, characterId, language: urlLang, grade, ...(source ? { source } : {}) }, handlers)
+    const short = () => streamLesson({ topic, characterId, language: urlLang, grade, ...boardOpt, ...(source ? { source } : {}) }, handlers)
     const run = ncert
-      ? Promise.resolve().then(() => streamDeepLesson({ ncert, characterId, language: urlLang, grade }, {
+      ? Promise.resolve().then(() => streamDeepLesson({ ncert, characterId, language: urlLang, grade, ...boardOpt }, {
           ...handlers,
           onMeta: (m: DeepMeta) => { setDmeta(m); setOutline(m.outline ?? []); handlers.onMeta(m) },
         })).then(() => { if (seen.current.size === 0) throw new Error('empty') })
@@ -96,7 +100,7 @@ export default function Learn() {
       .catch(() => { if (!ac.signal.aborted && seen.current.size === 0) setError(true) })
       .finally(() => { if (!ac.signal.aborted) { streamingRef.current = false; setStreaming(false) } })
     return () => { ac.abort(); fetched.current = false; seen.current = new Set(); setLesson(null); setOutline([]); setCovered(new Set()); setDmeta(null) }
-  }, [topic, characterId, urlLang, grade, ncertFile, ncertSec])
+  }, [topic, characterId, urlLang, grade, ncertFile, ncertSec, boardLang])
 
   useEffect(() => () => { runId.current++; stopSpeaking(); stopListening() }, [])
   // Warm the quiz while the lesson plays, so "Test yourself" opens instantly (server caches + dedupes it).
@@ -104,7 +108,7 @@ export default function Learn() {
   useEffect(() => {
     if (streaming || quizWarmed.current || !lesson || lesson.steps.length < 3 || source || (lesson as Lesson & { fallback?: boolean }).fallback) return
     quizWarmed.current = true
-    void generateQuiz({ topic, language: urlLang, grade, lesson, ...(ncert ? { ncert } : {}) }).catch(() => {})
+    void generateQuiz({ topic, language: boardLang ?? urlLang, grade, lesson, ...(ncert ? { ncert } : {}) }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming, lesson, source, topic, urlLang, grade])
   useEffect(() => { prefetchSpeech(ACK, { speaker: ch.speaker, language: lang }) }, [ch.speaker, lang])
@@ -166,7 +170,7 @@ export default function Learn() {
     if (lang === 'en-IN') void speak(ACK, { speaker: ch.speaker, language: lang }).catch(() => {})
     let ok = false
     try {
-      const ans = await askTeacher({ question: q, lesson, characterId, language: lang, grade, ...(focus?.length ? { focus } : {}) })
+      const ans = await askTeacher({ question: q, lesson, characterId, language: lang, grade, ...boardOpt, ...(focus?.length ? { focus } : {}) })
       const ns = { ...ans, board: [{ kind: 'text' as const, text: 'Q: ' + (boardQ ?? q) }, ...ans.board] }
       const at = step + 1
       setLesson(l => l && { ...l, steps: [...l.steps.slice(0, at), ns, ...l.steps.slice(at)] })
@@ -240,7 +244,7 @@ export default function Learn() {
   const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m) }
   const begin = () => { setStarted(true); setPlaying(true) }
   const toQuiz = () =>
-    nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${lang}&grade=${grade}${ncert ? `&ncert=${ncert.file}${ncert.sec ? `&sec=${encodeURIComponent(ncert.sec)}` : ''}` : ''}`, { state: { lesson, source } })
+    nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${boardLang ?? lang}&grade=${grade}${ncert ? `&ncert=${ncert.file}${ncert.sec ? `&sec=${encodeURIComponent(ncert.sec)}` : ''}` : ''}`, { state: { lesson, source } })
 
   const jumpTo = (id: number) => {
     const at = steps.findIndex(s => s.covers?.includes(id))
@@ -298,7 +302,7 @@ export default function Learn() {
                   <button className="pg-ib" aria-label={muted ? 'Unmute' : 'Mute'} onClick={toggleMute}><Icon name={muted ? 'mute' : 'speaker'} size={22} /></button>
                 </div>
                 <div className="pg-extras">
-                  {lesson && <LangSwitch lesson={lesson} current={lang} disabled={streaming} onSwitch={switchLanguage} />}
+                  {lesson && <LangSwitch lesson={lesson} current={lang} disabled={streaming} onSwitch={switchLanguage} {...boardOpt} />}
                   <ShareButton topic={lesson?.topic || topic} characterId={characterId} language={urlLang} grade={grade} />
                 </div>
                 {outline.length > 0 && <Outline variant="side" outline={outline} covered={covered} onJump={jumpTo} />}
@@ -333,7 +337,7 @@ export default function Learn() {
                     ))}
                   </div>
                 )}
-                {finished && lesson && <TeachBack lesson={lesson} characterId={characterId} language={lang} grade={grade} onCorrection={insertStep} />}
+                {finished && lesson && <TeachBack lesson={lesson} characterId={characterId} language={lang} grade={grade} onCorrection={insertStep} {...boardOpt} />}
                 {finished && <SketchButton onClick={toQuiz}>Test yourself →</SketchButton>}
                 {fallback && <div className="pg-note">offline sample lesson</div>}
               </>

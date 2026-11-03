@@ -7,6 +7,7 @@ import { SketchButton, SketchCard, Scribble, Icon, TopBar, Chip, TextInput } fro
 import { getHistory, getTotalStars } from '../lib/progress'
 import { getProfile } from '../lib/profile'
 import CoachCard from '../components/Coach/CoachCard'
+import BoardLangToggle, { boardParam, useEnglishBoard } from '../components/BoardLang/BoardLang'
 import './pages.css'
 import './study.css'
 import { DoodleScatter, Doodle } from '../components/Doodles/Doodles'
@@ -49,6 +50,7 @@ export default function Home() {
   const [prefs] = useState(loadPrefs)
   const [cid, setCid] = useState(prefs.c)
   const [lang, setLang] = useState<LanguageCode>(prefs.l)
+  const [englishBoard, setEnglishBoard] = useEnglishBoard()
   const [grade, setGrade] = useState(() => { const g = Number(qs.get('grade')); return g >= 1 && g <= 10 ? g : prefs.g })
   const [topic, setTopic] = useState(qs.get('topic') ?? '')
   const [hover, setHover] = useState<string | null>(null)
@@ -62,7 +64,7 @@ export default function Home() {
     const t = topic.trim()
     if (!t) return
     try { localStorage.setItem(KEY, JSON.stringify({ c: cid, l: lang, g: grade })) } catch { /* ignore */ }
-    nav(`/learn/${cid}?topic=${encodeURIComponent(t)}&lang=${lang}&grade=${grade}`)
+    nav(`/learn/${cid}?topic=${encodeURIComponent(t)}&lang=${lang}&grade=${grade}${boardParam(lang, englishBoard)}`)
   }
 
   return (
@@ -146,6 +148,7 @@ export default function Home() {
               ))}
             </div>
           </div>
+          <BoardLangToggle lang={lang} on={englishBoard} onChange={setEnglishBoard} />
           <div className="pg-go">
             <SketchButton onClick={start} disabled={!topic.trim()}>Start the lesson</SketchButton>
           </div>

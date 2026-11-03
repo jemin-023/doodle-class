@@ -34,7 +34,7 @@ export interface CatalogSubject { id: string; name: string; books: CatalogBook[]
 export interface CatalogClass { grade: number; subjects: CatalogSubject[] }
 export interface NcertCatalog { generatedAt: string; classes: CatalogClass[] }
 /** Deep lesson request: POST /api/v2/deep, NDJSON response (meta with outline, steps with covers, done with optional next). */
-export interface DeepRequest { ncert: NcertRef; characterId: string; language: LanguageCode; grade: number; from?: number }
+export interface DeepRequest { ncert: NcertRef; characterId: string; language: LanguageCode; grade: number; from?: number; boardLanguage?: LanguageCode }
 export interface DeepMeta { topic: string; subject: string; outline: OutlineItem[]; source: { grade: number; subject: string; book: string; chapter: string; section?: string } }
 
 export interface Lesson {
@@ -74,5 +74,7 @@ export interface LessonRequest {
   topic: string; characterId: string; language: LanguageCode; grade: number
   /** Optional source text (e.g. OCR of a textbook page) the lesson must be grounded in. <= 6000 chars. Never cached. */
   source?: string
+  /** Written (board) language when it differs from the spoken one, e.g. listen in Hindi, write in English (English-medium kids). */
+  boardLanguage?: LanguageCode
 }
 export interface QuizRequest { topic: string; language: LanguageCode; grade: number; lesson?: Lesson; source?: string; ncert?: NcertRef }

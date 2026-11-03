@@ -93,10 +93,10 @@ async function chatTranslate(strings, target) {
 }
 
 /* ---------- lesson <-> string list ---------- */
-function walk(lesson, fn) {
+function walk(lesson, fn, board = true) {
   lesson.steps.forEach(st => {
     fn(st.say, v => { st.say = v })
-    ;(st.board || []).forEach(it => {
+    ;(board ? (st.board || []) : []).forEach(it => {
       if (!it || SKIP.has(it.kind)) return
       if (typeof it.text === 'string' && it.kind !== 'table') fn(it.text, v => { it.text = v })
       if (typeof it.label === 'string') fn(it.label, v => { it.label = v })
@@ -106,19 +106,20 @@ function walk(lesson, fn) {
     })
   })
 }
-function applyStrings(lesson, translated) {
+function applyStrings(lesson, translated, board = true) {
   let n = 0
-  walk(lesson, (s, set) => { set(translated[n++]); return s })
+  walk(lesson, (s, set) => { set(translated[n++]); return s }, board)
 }
 
-export async function translateLesson(lesson, target) {
+/** board:false translates only the spoken narration (board stays e.g. English for English-medium kids). */
+export async function translateLesson(lesson, target, { board = true } = {}) {
   const copy = JSON.parse(JSON.stringify(lesson))
   const list = []
-  walk(copy, (s) => { list.push(s); return s })
+  walk(copy, (s) => { list.push(s); return s }, board)
   let tr
   try { tr = await translateStrings(list, target) }
   catch (e) { console.warn('[translate] mayura failed, chat fallback:', e.message); tr = await chatTranslate(list, target) }
-  applyStrings(copy, tr)
+  applyStrings(copy, tr, board)
   copy.language = target
   return copy
 }
@@ -127,14 +128,14 @@ export default async function handler(req, res) {
   if (rejectNonPost(req, res)) return
   const b = parseBody(req)
   const lesson = b.lesson
-  if (!lesson || !Array.isArray(lesson.steps) || lesson.steps.length > 14 || JSON.stringify(lesson).length > 120000)
+  if (!lesson || !Array.isArray(lesson.steps) || lesson.steps.length > 60 || JSON.stringify(lesson).length > 400000)
     return res.status(400).json({ error: 'lesson required' })
   const target = cleanLang(b.target)
   if (target === lesson.language) return res.status(200).json({ lesson })
   if (!hasKey()) return res.status(200).json({ lesson, untranslated: true })
   const t0 = Date.now()
   try {
-    const out = await translateLesson(lesson, target)
+    const out = await translateLesson(lesson, target, { board: !b.sayOnly })
     res.setHeader?.('X-Translate-Ms', String(Date.now() - t0))
     return res.status(200).json({ lesson: out })
   } catch (e) {
