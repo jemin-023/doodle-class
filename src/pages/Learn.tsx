@@ -5,9 +5,11 @@ import type { Lesson, LanguageCode, Mood } from '../types'
 import Whiteboard from '../components/Whiteboard/Whiteboard'
 import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
-import { SketchButton, Icon, ProgressDots, TopBar } from '../components/ui'
-import { generateLesson } from '../lib/api'
-import { speak, stopSpeaking, setMuted, isMuted } from '../lib/tts'
+import { SketchButton, Icon, ProgressDots, TopBar, TextInput } from '../components/ui'
+import { streamLesson, askTeacher } from '../lib/api'
+import { speak, stopSpeaking, setMuted, isMuted, prefetchSpeech } from '../lib/tts'
+import { listen, stopListening, sttSupported } from '../lib/stt'
+import type { ListenState } from '../lib/stt'
 import './pages.css'
 
 export default function Learn() {
@@ -34,27 +36,55 @@ export default function Learn() {
   const writtenRef = useRef(-1)
   const checkRef = useRef<(() => void) | null>(null)
   const fetched = useRef(false)
+  const seen = useRef(new Set<number>())
+  const [streaming, setStreaming] = useState(true)
+  const [waiting, setWaiting] = useState(false)
+  const streamingRef = useRef(true)
+  const stepsRef = useRef<Lesson['steps']>([])
+  const [askOpen, setAskOpen] = useState(false)
+  const [question, setQuestion] = useState('')
+  const [asking, setAsking] = useState(false)
+  const [listenState, setListenState] = useState<ListenState>('idle')
+  const lessonRef = useRef<Lesson | null>(null)
 
   useEffect(() => {
     if (fetched.current) return
     fetched.current = true
-    generateLesson({ topic, characterId, language: lang, grade })
-      .then(setLesson)
-      .catch(() => setError(true))
+    const ac = new AbortController()
+    streamLesson({ topic, characterId, language: lang, grade }, {
+      signal: ac.signal,
+      onMeta: m => setLesson(l => l ?? { topic: m.topic, subject: m.subject, characterId, language: lang, steps: [] }),
+      onStep: (st, idx) => {
+        if (seen.current.has(idx)) return
+        seen.current.add(idx)
+        setLesson(l => ({
+          topic: l?.topic ?? topic, subject: l?.subject ?? '', characterId, language: lang,
+          ...(l ?? {}), steps: [...(l?.steps ?? []), st],
+        }))
+      },
+    })
+      .catch(() => { if (!ac.signal.aborted && seen.current.size === 0) setError(true) })
+      .finally(() => { if (!ac.signal.aborted) { streamingRef.current = false; setStreaming(false) } })
+    return () => { ac.abort(); fetched.current = false; seen.current = new Set(); setLesson(null) }
   }, [topic, characterId, lang, grade])
 
-  useEffect(() => () => { runId.current++; stopSpeaking() }, [])
+  useEffect(() => () => { runId.current++; stopSpeaking(); stopListening() }, [])
 
   const steps = lesson?.steps ?? []
   const last = steps.length - 1
+  stepsRef.current = steps
+  lessonRef.current = lesson
+  const curSay = steps[step]?.say
 
   useEffect(() => {
-    if (!lesson || !started || !playing || finished) { setMood(finished ? 'happy' : 'idle'); return }
+    if (!started || !playing || finished || curSay === undefined) { setMood(finished ? 'happy' : 'idle'); return }
     const id = ++runId.current
     let spoken = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let advanced = false
     setMood('talking')
+    const nx = stepsRef.current[step + 1]
+    if (nx) prefetchSpeech(nx.say, { speaker: ch.speaker, language: lang })
     const check = () => {
       if (id !== runId.current || advanced) return
       if (!spoken || writtenRef.current !== step) return
@@ -62,11 +92,13 @@ export default function Learn() {
       setMood('idle')
       timer = setTimeout(() => {
         if (id !== runId.current) return
-        if (step >= last) { setFinished(true); setMood('happy') } else setStep(step + 1)
+        if (step < stepsRef.current.length - 1) setStep(step + 1)
+        else if (streamingRef.current) setWaiting(true)
+        else { setFinished(true); setMood('happy') }
       }, 700)
     }
     checkRef.current = check
-    speak(lesson.steps[step].say, { speaker: ch.speaker, language: lang })
+    speak(curSay, { speaker: ch.speaker, language: lang })
       .catch(() => { /* fall through */ })
       .then(() => { spoken = true; check() })
     return () => {
@@ -75,7 +107,36 @@ export default function Learn() {
       checkRef.current = null
       stopSpeaking()
     }
-  }, [lesson, started, playing, finished, step, nonce, last, ch.speaker, lang])
+  }, [started, playing, finished, step, nonce, curSay, ch.speaker, lang])
+
+  useEffect(() => {
+    if (!waiting) return
+    if (steps.length > step + 1) { setWaiting(false); setStep(step + 1) }
+    else if (!streaming) { setWaiting(false); setFinished(true) }
+  }, [waiting, steps.length, streaming, step])
+
+  const doAsk = async () => {
+    const q = question.trim()
+    if (!q || asking || !lesson) return
+    setAsking(true); setPlaying(false); stopSpeaking(); setMood('thinking'); setWaiting(false)
+    try {
+      const ans = await askTeacher({ question: q, lesson, characterId, language: lang, grade })
+      const ns = { ...ans, board: [{ kind: 'text' as const, text: 'Q: ' + q }, ...ans.board] }
+      const at = step + 1
+      setLesson(l => l && { ...l, steps: [...l.steps.slice(0, at), ns, ...l.steps.slice(at)] })
+      setStep(at); setFinished(false); setQuestion(''); setAskOpen(false)
+      setPlaying(true)
+    } catch { /* keep panel open */ }
+    setAsking(false)
+  }
+  const mic = async () => {
+    if (listenState !== 'idle') { stopListening(); return }
+    try {
+      const t = await listen({ language: lang, onState: setListenState })
+      if (t) setQuestion(t)
+    } catch { /* ignore */ }
+    setListenState('idle')
+  }
 
   const onWritten = useCallback((s: number) => {
     writtenRef.current = s
@@ -91,7 +152,7 @@ export default function Learn() {
   const toQuiz = () =>
     nav(`/quiz?topic=${encodeURIComponent(topic)}&character=${characterId}&lang=${lang}&grade=${grade}`, { state: { lesson } })
 
-  const thinking = !lesson && !error
+  const thinking = steps.length === 0 && !error
   const say = error ? "Oops, my markers dried up. Let's go back and try again."
     : finished ? "That's the lesson! Ready to see what stuck?"
     : lesson ? lesson.steps[step]?.say ?? '' : ''
@@ -109,19 +170,20 @@ export default function Learn() {
           <div className="pg-board">
             {thinking && <div className="pg-board-msg">Getting my markers ready…</div>}
             {error && <div className="pg-board-msg">Couldn't load the lesson.</div>}
-            {lesson && !started && (
+            {steps.length > 0 && !started && (
               <div className="pg-board-msg">
                 <SketchButton onClick={begin}>Start</SketchButton>
+                {streaming && <div className="pg-note">Bolt is writing more…</div>}
               </div>
             )}
-            {lesson && started && (
+            {steps.length > 0 && started && (
               <Whiteboard steps={steps} currentStep={step} accent={ch.color} onStepWritten={onWritten} />
             )}
           </div>
           <aside className="pg-side">
             <Character id={characterId} mood={shownMood} size={200} />
             <SpeechBubble text={say} side="left" typing={thinking} />
-            {lesson && (
+            {steps.length > 0 && (
               <>
                 <div className="pg-controls">
                   <button className="pg-ib" aria-label="Previous step" onClick={() => go(step - 1)}><Icon name="back" size={22} /></button>
@@ -134,6 +196,23 @@ export default function Learn() {
                   <button className="pg-ib" aria-label={muted ? 'Unmute' : 'Mute'} onClick={toggleMute}><Icon name={muted ? 'mute' : 'speaker'} size={22} /></button>
                 </div>
                 <ProgressDots total={steps.length} current={step} />
+                {started && streaming && <div className="pg-note">{ch.name} is writing more…</div>}
+                {started && !finished && (
+                  <SketchButton variant="ghost" disabled={asking} onClick={() => setAskOpen(o => !o)}><Icon name="pencil" size={18} /> I have a doubt</SketchButton>
+                )}
+                {askOpen && (
+                  <div className="pg-ask">
+                    <TextInput value={question} disabled={asking} placeholder="What's confusing?"
+                      onChange={e => setQuestion(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') doAsk() }} />
+                    <div className="pg-ask-row">
+                      {sttSupported() && (
+                        <button className="pg-ib" type="button" disabled={asking} aria-label="Speak your question" onClick={mic}>{listenState === 'idle' ? "Speak" : "Stop"}</button>
+                      )}
+                      <SketchButton disabled={asking || !question.trim()} onClick={doAsk}>Ask</SketchButton>
+                    </div>
+                    {(listenState !== 'idle' || asking) && <div className="pg-note">{asking ? 'thinking…' : 'listening…'}</div>}
+                  </div>
+                )}
                 {finished && <SketchButton onClick={toQuiz}>Test yourself →</SketchButton>}
                 {fallback && <div className="pg-note">offline sample lesson</div>}
               </>

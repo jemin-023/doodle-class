@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CHARACTERS, LANGUAGES } from '../characters/registry'
 import type { LanguageCode } from '../types'
 import Character, { CharacterAvatar } from '../components/Characters/Character'
@@ -110,6 +110,10 @@ export default function Home() {
             <SketchButton onClick={start} disabled={!topic.trim()}>Start the lesson</SketchButton>
           </div>
         </section>
+
+        <p style={{ fontFamily: 'var(--font-hand)', fontSize: 24, margin: '24px 0 0' }}>
+          <Link to="/progress" style={{ color: 'var(--marker-blue)' }}>See my progress →</Link>
+        </p>
 
         {history.length > 0 && (
           <section className="pg-recent" aria-labelledby="pg-rec">

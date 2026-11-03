@@ -14,7 +14,8 @@ try {
   }
 } catch {}
 
-const routes = { '/api/lesson': 'lesson.js', '/api/quiz': 'quiz.js', '/api/tts': 'tts.js' }
+const PORT = Number(process.env.PORT) || 8787
+const routes = { '/api/lesson': 'lesson.js', '/api/quiz': 'quiz.js', '/api/tts': 'tts.js', '/api/lesson-stream': 'lesson-stream.js', '/api/ask': 'ask.js', '/api/stt': 'stt.js', '/api/syllabus': 'syllabus.js', '/api/coach': 'coach.js' }
 
 http.createServer(async (req, res) => {
   const t0 = Date.now()
@@ -35,4 +36,4 @@ http.createServer(async (req, res) => {
     console.error(e)
     if (!res.writableEnded) res.status(500).json({ error: String(e.message || e) })
   }
-}).listen(8787, () => console.log('Doodle Class API on http://localhost:8787', process.env.SARVAM_API_KEY ? '(key loaded)' : '(NO SARVAM_API_KEY: fallbacks only)'))
+}).listen(PORT, () => console.log('Doodle Class API on http://localhost:' + PORT, process.env.SARVAM_API_KEY ? '(key loaded)' : '(NO SARVAM_API_KEY: fallbacks only)'))

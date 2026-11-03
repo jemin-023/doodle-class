@@ -42,3 +42,11 @@
 .qz-msg { font-size: 1.2rem; color: var(--ink-soft); margin: 0 0 28px; }
 .qz-result-actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
 @media (prefers-reduced-motion: reduce) { .qz-star.is-on { animation: none; transform: none; } .qz-opt { transition: none; } }
+
+.qz-voice { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0 4px; }
+.qz-mic { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-hand, inherit); font-size: 1.1rem; padding: 6px 16px; background: transparent; color: inherit; border: 2.5px solid currentColor; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; cursor: pointer; }
+.qz-mic.is-rec { border-color: #d64545; color: #d64545; }
+.qz-mic:disabled { opacity: .6; cursor: wait; }
+.qz-rec-dot { width: 14px; height: 14px; border-radius: 50%; background: #d64545; animation: qz-pulse 1s ease-in-out infinite; }
+@keyframes qz-pulse { 0%,100% { transform: scale(.8); opacity: .7 } 50% { transform: scale(1.3); opacity: 1 } }
+.qz-heard { font-style: italic; opacity: .8; }

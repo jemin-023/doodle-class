@@ -63,17 +63,16 @@ function browserSpeak(text: string, language: LanguageCode, myGen: number): Prom
   })
 }
 
-export async function speak(text: string, opts: Opts): Promise<void> {
-  const myGen = ++gen
-  // keep earlier stop callbacks from leaking: a new speak supersedes any old playback
-  const old = stopFns; stopFns = []; old.forEach(f => { try { f() } catch { /* ignore */ } })
-  try { window.speechSynthesis?.cancel() } catch { /* ignore */ }
+const inflight = new Map<string, Promise<string[] | undefined>>()
+const keyOf = (text: string, o: Opts) => `${text}|${o.speaker}|${o.language}`
 
-  if (muted) return wait(Math.max(1500, text.length * 55), myGen)
-
-  const key = `${text}|${opts.speaker}|${opts.language}`
-  let chunks = cache.get(key)
-  if (!chunks) {
+function getChunks(text: string, opts: Opts): Promise<string[] | undefined> {
+  const key = keyOf(text, opts)
+  const hit = cache.get(key)
+  if (hit) return Promise.resolve(hit)
+  let p = inflight.get(key)
+  if (p) return p
+  p = (async () => {
     try {
       const r = await fetch('/api/tts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -82,19 +81,36 @@ export async function speak(text: string, opts: Opts): Promise<void> {
       if (!r.ok) throw new Error('tts ' + r.status)
       const j = await r.json()
       const got: string[] = Array.isArray(j.audio) ? j.audio : typeof j.audio === 'string' ? [j.audio] : []
-      chunks = got
       if (!got.length) throw new Error('no audio')
       cache.set(key, got)
+      return got
     } catch {
-      chunks = undefined
+      return undefined
+    } finally {
+      inflight.delete(key)
     }
-  }
+  })()
+  inflight.set(key, p)
+  return p
+}
+
+export async function speak(text: string, opts: Opts): Promise<void> {
+  const myGen = ++gen
+  // keep earlier stop callbacks from leaking: a new speak supersedes any old playback
+  const old = stopFns; stopFns = []; old.forEach(f => { try { f() } catch { /* ignore */ } })
+  try { window.speechSynthesis?.cancel() } catch { /* ignore */ }
+
+  if (muted) return wait(Math.max(1500, text.length * 55), myGen)
+
+  const chunks = await getChunks(text, opts)
   if (myGen !== gen) return              // stopped or superseded while fetching
   if (muted) return wait(Math.max(1500, text.length * 55), myGen)
   if (chunks) return playChunks(chunks, myGen)
   return browserSpeak(text, opts.language, myGen)
 }
 
-// ---- CONTRACT STUB (round 2) — Agent I implements ----
 /** Fetch + cache TTS audio for text ahead of time so the next step plays instantly. Fire-and-forget. */
-export function prefetchSpeech(_text: string, _opts: { speaker: string; language: LanguageCode }): void {}
+export function prefetchSpeech(text: string, opts: Opts): void {
+  if (!text) return
+  void getChunks(text, opts)
+}

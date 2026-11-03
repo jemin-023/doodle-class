@@ -4,7 +4,9 @@ import type { LanguageCode, Lesson, Mood, Quiz as QuizData, QuizQuestion } from 
 import { getCharacter } from '../characters/registry'
 import { generateQuiz } from '../lib/api'
 import { speak, stopSpeaking, isMuted, setMuted } from '../lib/tts'
-import { saveResult, starsFor } from '../lib/progress'
+import { saveResult, starsFor, recordAnswer } from '../lib/progress'
+import { markTopicDoneByTopic } from '../lib/journey'
+import { listen, stopListening, sttSupported, type ListenState } from '../lib/stt'
 import Character from '../components/Characters/Character'
 import SpeechBubble from '../components/Characters/SpeechBubble'
 import { SketchButton, SketchCard, Scribble, Icon, ProgressDots, TopBar } from '../components/ui'
@@ -12,6 +14,39 @@ import '../components/Quiz/quiz.css'
 
 const LETTERS = ['A', 'B', 'C', 'D']
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+
+const WORDS: Record<string, number> = { one: 1, won: 1, ek: 1, first: 1, two: 2, to: 2, too: 2, do: 2, second: 2, three: 3, teen: 3, third: 3, four: 4, for: 4, char: 4, fourth: 4 }
+const LETTER_WORDS: Record<string, number> = { a: 1, ay: 1, b: 2, be: 2, bee: 2, c: 3, see: 3, sea: 3, d: 4, dee: 4 }
+const TRUE_W = ['true', 'sahi', 'right', 'yes', 'correct', 'सही', 'हाँ', 'हां', 'सत्य']
+const FALSE_W = ['false', 'galat', 'wrong', 'no', 'incorrect', 'गलत', 'नहीं', 'नही', 'असत्य']
+
+function matchOption(heard: string, q: QuizQuestion): string | null {
+  const opts = q.options ?? []
+  const h = norm(heard).replace(/[.,!?।]/g, '')
+  if (!h) return null
+  const toks = h.split(' ')
+  if (q.type === 'truefalse') {
+    const f = toks.some(t => FALSE_W.includes(t)), t = toks.some(t => TRUE_W.includes(t))
+    if (f !== t) return opts.find(o => norm(o) === (f ? 'false' : 'true')) ?? opts[f ? 1 : 0] ?? null
+  }
+  const exact = opts.find(o => norm(o).replace(/[.,!?]/g, '') === h)
+  if (exact) return exact
+  const m = h.match(/(?:option|number|choice|answer)?\s*(?:is\s+)?\b([abcd1-4])\b\s*$/)
+  if (m) { const n = /\d/.test(m[1]) ? Number(m[1]) : m[1].charCodeAt(0) - 96; if (opts[n - 1]) return opts[n - 1] }
+  if (/option|number|choice|answer/.test(h) || toks.length <= 2) {
+    for (const t of toks) { const n = WORDS[t] ?? LETTER_WORDS[t]; if (n && opts[n - 1]) return opts[n - 1] }
+  }
+  const contained = opts.filter(o => h.includes(norm(o)))
+  if (contained.length) return contained.sort((a, b) => b.length - a.length)[0]
+  const hs = new Set(toks)
+  let best: string | null = null, bs = 0
+  for (const o of opts) {
+    const ot = norm(o).replace(/[.,!?]/g, '').split(' ').filter(Boolean)
+    const sc = ot.filter(t => hs.has(t)).length / (ot.length || 1)
+    if (sc > bs) { bs = sc; best = o }
+  }
+  return bs >= 0.5 ? best : null
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -62,6 +97,9 @@ export default function QuizPage() {
   const [score, setScore] = useState(0)
   const [done, setDone] = useState(false)
   const [muted, setMutedState] = useState(isMuted())
+  const [listenState, setListenState] = useState<ListenState>('idle')
+  const [heard, setHeard] = useState<string | null>(null)
+  const canListen = useMemo(() => sttSupported(), [])
   const quizRef = useRef<QuizData | null>(null)
 
   useEffect(() => {
@@ -80,7 +118,8 @@ export default function QuizPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topic, language, grade, attempt])
 
-  useEffect(() => () => stopSpeaking(), [])
+  useEffect(() => () => { stopSpeaking(); stopListening() }, [])
+  useEffect(() => { setHeard(null) }, [idx])
 
   const q = questions?.[idx]
   const total = questions?.length ?? 0
@@ -90,14 +129,16 @@ export default function QuizPage() {
     const ok = norm(answer) === norm(q.answer)
     setCorrect(ok); setAnswered(true)
     if (ok) setScore(s => s + 1)
+    recordAnswer({ topic, characterId, questionId: q.id, prompt: q.prompt, answer, correct: ok, language })
     speak(q.explanation, { speaker: character.speaker, language }).catch(() => {})
-  }, [q, answered, character.speaker, language])
+  }, [q, answered, character.speaker, language, topic, characterId])
 
   const next = useCallback(() => {
     stopSpeaking()
     if (idx + 1 >= total) {
       const finalScore = score
       saveResult({ topic, characterId, bestScore: finalScore, total, stars: starsFor(finalScore, total) })
+      if (finalScore > 0) markTopicDoneByTopic(topic)
       setDone(true)
       return
     }
@@ -120,6 +161,30 @@ export default function QuizPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [q, done, answered, picked, next, submit])
+
+  const sayIt = async () => {
+    if (!q || answered) return
+    if (listenState === 'recording') { stopListening(); return }
+    if (listenState !== 'idle') return
+    stopSpeaking()
+    const t = await listen({ language, onState: setListenState })
+    if (!t) { setHeard(''); return }
+    setHeard(t)
+    if (q.type === 'fill') setFillText(t.replace(/[.।]+$/, ''))
+    else { const m = matchOption(t, q); if (m) setPicked(m) }
+  }
+
+  const micButton = canListen && q && !answered ? (
+    <div className="qz-voice">
+      <button type="button" className={`qz-mic ${listenState === 'recording' ? 'is-rec' : ''}`} onClick={sayIt} disabled={listenState === 'processing'}>
+        {listenState === 'recording' ? <span className="qz-rec-dot" aria-hidden="true" /> : <Icon name="speaker" size={22} />}
+        <span>{listenState === 'recording' ? 'Listening… tap to stop' : listenState === 'processing' ? 'Thinking…' : 'Say it'}</span>
+      </button>
+      {heard !== null && listenState === 'idle' && (
+        <span className="qz-heard">{heard ? `I heard: ${heard}` : 'I could not hear that, try again'}</span>
+      )}
+    </div>
+  ) : null
 
   const retry = () => {
     stopSpeaking()
@@ -220,6 +285,7 @@ export default function QuizPage() {
                     />
                     {!answered && <SketchButton variant="primary" disabled={!fillText.trim()} onClick={() => submit(fillText)}>Check</SketchButton>}
                   </div>
+                  {micButton}
                   {answered && (
                     <div className="qz-answer-line">
                       {correct ? 'Yes!' : 'Answer:'} {q.answer}
@@ -229,6 +295,7 @@ export default function QuizPage() {
               ) : (
                 <>
                   <div className="qz-options" role="group" aria-label="Answer options">{(q.options ?? []).map(renderOption)}</div>
+                  {micButton}
                   {!answered && (
                     <div className="qz-actions">
                       <SketchButton variant="primary" disabled={!picked} onClick={() => picked && submit(picked)}>Check</SketchButton>
