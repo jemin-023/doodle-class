@@ -114,5 +114,12 @@ export function cleanBoardText(step, boardLanguage) {
       it.rows = it.rows.map(row => Array.isArray(row) ? row.map(c => typeof c === 'string' ? cleanBoardString(c) : c) : row)
     }
   }
+  // tidy leftovers ("Repel ( )", double spaces) and drop text items that became empty
+  const tidy = t => t.replace(/[(\[]\s*[)\]]/g, '').replace(/\s+([,.;:!?])/g, '$1').replace(/\s{2,}/g, ' ').trim()
+  step.board = step.board.filter(it => {
+    if (!it || typeof it.text !== 'string' || it.kind === 'equation') return true
+    it.text = tidy(it.text)
+    return it.text.replace(/\*\*/g, '').trim().length > 0
+  })
   return step
 }
